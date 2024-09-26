@@ -14,7 +14,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         maxPixelVal = double(1);          %what does pixel value of 1 equal in isomerizations/sec at current light level
         condition = 'linear_30';         %'linear_30', 'linear_10', 'linear_3', 'speed_3to10', 'slow_30to10'
         randomize = true;
-        
+        magnificationFactor = 4;        
     end
     
     properties (Hidden)
@@ -23,7 +23,6 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         imageMatrix
         backgroundFrame
         backgroundIntensity
-        magnificationFactor
         imagePaths
         sequence
         movie_name
@@ -75,8 +74,9 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
             
             % Get the magnification factor. Exps were done with each pixel
             % = 1 arcmin == 1/60 degree; 200 um/degree...
-            obj.magnificationFactor = round(2/60*200/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'));
-            
+            if obj.magnificationFactor==0
+                obj.magnificationFactor = round(2/60*200/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'));
+            end
         end
 
         
