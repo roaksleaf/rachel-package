@@ -139,11 +139,12 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                 varmat = var(matrix, 0, 3);
                 pixel = max(varmat(:)); % find pixel with highest variance over time
                 [x, y] = find(varmat == pixel);
-                obj.pixelIndex = [x, y];
+                loc = [x, y];
+                obj.pixelIndex = loc(1, :);
                 fullPixel = zeros(size(matrix));
                 matrixSize = size(matrix);
                 for i = 1:matrixSize(3)
-                    fullPixel(:, :, i) = repelem(matrix(x, y, i), matrixSize(1), matrixSize(2));
+                    fullPixel(:, :, i) = repelem(matrix(obj.pixelIndex(1), obj.pixelIndex(2), i), matrixSize(1), matrixSize(2));
                 end
                 fullPixel = uint8(255*fullPixel);
                 obj.imageMatrix = fullPixel;
