@@ -5,7 +5,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
     properties
         amp                             % Output amplifier
         preTime = 250                   %Stimulus leading duration (ms)
-        stimTime = 7033                % Stimulus duration (ms) %7033 for doves, 7000 for noise
+        stimTime = 7033                % Stimulus duration (ms) %7033 for doves, 15000 for noise
         tailTime = 250                  % Stimulus trailing duration (ms)
         stimulusSet = 'DovesMod';          % The current movie stimulus set %DovesMod, NoiseMod
         onlineAnalysis = 'none'; % Type of online analysis
@@ -14,7 +14,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         maxPixelVal = double(1);          %what does pixel value of 1 equal in isomerizations/sec at current light level
         condition = 'linear_30';         %'linear_30', 'linear_10', 'linear_3', 'speed_3to10', 'slow_30to10'
         randomize = true;
-        magnificationFactor = 4;        
+        magnificationFactor = 4;        %for noise - magnify by 40 (mu per pixel = 3.24 * 40 ~= 130 micron stixels. for Doves, mag = 4.
     end
     
     properties (Hidden)
