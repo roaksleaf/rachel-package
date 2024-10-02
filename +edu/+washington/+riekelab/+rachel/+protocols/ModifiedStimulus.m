@@ -14,7 +14,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         maxPixelVal = double(1);          %what does pixel value of 1 equal in isomerizations/sec at current light level
         condition = 'linear_30';         %'linear_30', 'linear_10', 'linear_3', 'speed_3to10', 'slow_30to10'
         randomize = true;
-        magnificationFactor = 4;        %for noise - magnify by 40 (mu per pixel = 3.24 * 40 ~= 130 micron stixels. for Doves, mag = 4.
+        magnificationFactor = 4;        %for noise - magnify by 13
     end
     
     properties (Hidden)
@@ -133,6 +133,8 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
 
             matrix = temp.frames;
             matrix = matrix ./ obj.maxPixelVal; %scale image from isomerizations/sec to pixel values
+
+            matrixSize = size(matrix);
         
             % Prep to display movie
             if obj.singleCellFlag
@@ -142,7 +144,6 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                 loc = [x, y];
                 obj.pixelIndex = loc(1, :);
                 fullPixel = zeros(size(matrix));
-                matrixSize = size(matrix);
                 for i = 1:matrixSize(3)
                     fullPixel(:, :, i) = repelem(matrix(obj.pixelIndex(1), obj.pixelIndex(2), i), matrixSize(1), matrixSize(2));
                 end
@@ -155,7 +156,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
             end
             
             obj.backgroundIntensity = mean(double(obj.imageMatrix(:))/255);
-            obj.backgroundFrame = uint8(obj.backgroundIntensity*ones(240, 320));
+            obj.backgroundFrame = uint8(obj.backgroundIntensity*ones(matrixSize(1), matrixSize(2)));
             disp('background')
            
             epoch.addParameter('movieName',obj.imagePaths{mov_name,1});
