@@ -129,9 +129,14 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
             disp(obj.directory)
             disp(obj.movie_name)
             fileLocation = fullfile(obj.directory, obj.movie_name);
-            temp = load(char(fileLocation), 'frames');
+            temp = load(char(fileLocation));
+            
+            if isfield(temp, 'frames')
+                matrix = temp.frames;
+            elseif isfield(temp, 'struct_raw')
+                matrix = temp.struct_raw;
+            end
 
-            matrix = temp.frames;
             matrix = matrix ./ obj.maxPixelVal; %scale image from isomerizations/sec to pixel values
 
             matrixSize = size(matrix);
