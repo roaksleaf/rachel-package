@@ -5,7 +5,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
     properties
         amp                             % Output amplifier
         preTime = 250                   %Stimulus leading duration (ms)
-        stimTime = 7033                % Stimulus duration (ms) %7033 for doves, 7000 for noise
+        stimTime = 7033                % Stimulus duration (ms) %7033 for doves, 15000 for noise
         tailTime = 250                  % Stimulus trailing duration (ms)
         stimulusSet = 'DovesMod';          % The current movie stimulus set %DovesMod, NoiseMod
         onlineAnalysis = 'none'; % Type of online analysis
@@ -14,7 +14,8 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         maxPixelVal = double(1);          %what does pixel value of 1 equal in isomerizations/sec at current light level
         condition = 'linear_30';         %'linear_30', 'linear_10', 'linear_3', 'speed_3to10', 'slow_30to10'
         randomize = true;
-        magnificationFactor = 4;        
+        magnificationFactor = 4;        %for noise - magnify by 13
+
     end
     
     properties (Hidden)
@@ -78,6 +79,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                 obj.magnificationFactor = round(2/60*200/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'));
             end
             disp('end of prepare run')
+
         end
 
         
@@ -133,10 +135,17 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
             disp(obj.directory)
             disp(obj.movie_name)
             fileLocation = fullfile(obj.directory, obj.movie_name);
-            temp = load(char(fileLocation), 'frames');
+            temp = load(char(fileLocation));
+            
+            if isfield(temp, 'frames')
+                matrix = temp.frames;
+            elseif isfield(temp, 'struct_raw')
+                matrix = temp.struct_raw;
+            end
 
-            matrix = temp.frames;
             matrix = matrix ./ obj.maxPixelVal; %scale image from isomerizations/sec to pixel values
+
+            matrixSize = size(matrix);
         
             % Prep to display movie
             if obj.singleCellFlag
@@ -146,7 +155,6 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                 loc = [x, y];
                 obj.pixelIndex = loc(1, :);
                 fullPixel = zeros(size(matrix));
-                matrixSize = size(matrix);
                 for i = 1:matrixSize(3)
                     fullPixel(:, :, i) = repelem(matrix(obj.pixelIndex(1), obj.pixelIndex(2), i), matrixSize(1), matrixSize(2));
                 end
@@ -159,7 +167,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
             end
             
             obj.backgroundIntensity = mean(double(obj.imageMatrix(:))/255);
-            obj.backgroundFrame = uint8(obj.backgroundIntensity*ones(240, 320));
+            obj.backgroundFrame = uint8(obj.backgroundIntensity*ones(matrixSize(1), matrixSize(2)));
             disp('background')
            
             epoch.addParameter('movieName',obj.imagePaths{mov_name,1});
