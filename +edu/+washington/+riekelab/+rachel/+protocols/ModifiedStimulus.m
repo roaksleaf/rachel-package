@@ -14,7 +14,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         maxPixelVal = double(1);          %what does pixel value of 1 equal in isomerizations/sec at current light level
         condition = 'linear_30';         %'linear_30', 'linear_10', 'linear_3', 'speed_3to10', 'slow_30to10'
         randomize = true;
-        
+        magnificationFactor = 4;        
     end
     
     properties (Hidden)
@@ -23,7 +23,6 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         imageMatrix
         backgroundFrame
         backgroundIntensity
-        magnificationFactor
         imagePaths
         sequence
         movie_name
@@ -75,13 +74,16 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
             
             % Get the magnification factor. Exps were done with each pixel
             % = 1 arcmin == 1/60 degree; 200 um/degree...
-            obj.magnificationFactor = round(2/60*200/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'));
-            
+            if obj.magnificationFactor==0
+                obj.magnificationFactor = round(2/60*200/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'));
+            end
+            disp('end of prepare run')
         end
 
         
         function p = createPresentation(obj)
                 % Stage presets
+                disp('createPresentation called')
                 canvasSize = obj.rig.getDevice('Stage').getCanvasSize();  
                 p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
                 p.setBackgroundColor(obj.backgroundIntensity)   % Set background intensity
@@ -102,6 +104,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                     'imageMatrix', @(state)getSceneFrame(obj, state.time - obj.preTime*1e-3));
                 % Add the frame controller.
                 p.addController(sceneFrame);
+                disp('frame controller added')
 
                 function p = getSceneFrame(obj, time)
                     if time > 0 && time <= obj.stimTime*1e-3
@@ -116,6 +119,7 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
+                disp('visibility controller added')
                 
         end
         
@@ -139,11 +143,12 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                 varmat = var(matrix, 0, 3);
                 pixel = max(varmat(:)); % find pixel with highest variance over time
                 [x, y] = find(varmat == pixel);
-                obj.pixelIndex = [x, y];
+                loc = [x, y];
+                obj.pixelIndex = loc(1, :);
                 fullPixel = zeros(size(matrix));
                 matrixSize = size(matrix);
                 for i = 1:matrixSize(3)
-                    fullPixel(:, :, i) = repelem(matrix(x, y, i), matrixSize(1), matrixSize(2));
+                    fullPixel(:, :, i) = repelem(matrix(obj.pixelIndex(1), obj.pixelIndex(2), i), matrixSize(1), matrixSize(2));
                 end
                 fullPixel = uint8(255*fullPixel);
                 obj.imageMatrix = fullPixel;
