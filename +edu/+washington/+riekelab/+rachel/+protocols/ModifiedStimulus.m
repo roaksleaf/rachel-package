@@ -127,49 +127,54 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         
         function prepareEpoch(obj, epoch)
             prepareEpoch@manookinlab.protocols.ManookinLabStageProtocol(obj, epoch);
-            
+ 
             mov_name = obj.sequence(mod(obj.numEpochsCompleted,length(obj.sequence)) + 1);
-            obj.movie_name = obj.imagePaths{mov_name,1};
-
-            % load file
-            disp(obj.directory)
-            disp(obj.movie_name)
-            fileLocation = fullfile(obj.directory, obj.movie_name);
-            temp = load(char(fileLocation));
-            
-            if isfield(temp, 'frames')
-                matrix = temp.frames;
-            elseif isfield(temp, 'struct_raw')
-                matrix = temp.struct_raw;
-            end
-
-            matrix = matrix ./ obj.maxPixelVal; %scale image from isomerizations/sec to pixel values
-
-            matrixSize = size(matrix);
-        
-            % Prep to display movie
-            if obj.singleCellFlag
-                varmat = var(matrix, 0, 3);
-                pixel = max(varmat(:)); % find pixel with highest variance over time
-                [x, y] = find(varmat == pixel);
-                loc = [x, y];
-                obj.pixelIndex = loc(1, :);
-                fullPixel = zeros(size(matrix));
-                for i = 1:matrixSize(3)
-                    fullPixel(:, :, i) = repelem(matrix(obj.pixelIndex(1), obj.pixelIndex(2), i), matrixSize(1), matrixSize(2));
-                end
-                fullPixel = uint8(255*fullPixel);
-                obj.imageMatrix = fullPixel;
+            if mov_name == obj.sequence(mod(obj.numEpochsCompleted-1, length(obj.sequence)) +1)
+                disp('using loaded matrix')
+                disp(mov_name)
             else
-                matrix = uint8(255*matrix);
-                obj.imageMatrix = matrix;
-                disp('imageMatrix')
+                obj.movie_name = obj.imagePaths{mov_name,1};
+
+                % load file
+                disp(obj.directory)
+                disp(obj.movie_name)
+                fileLocation = fullfile(obj.directory, obj.movie_name);
+                temp = load(char(fileLocation));
+
+                if isfield(temp, 'frames')
+                    matrix = temp.frames;
+                elseif isfield(temp, 'struct_raw')
+                    matrix = temp.struct_raw;
+                end
+
+                matrix = matrix ./ obj.maxPixelVal; %scale image from isomerizations/sec to pixel values
+
+                matrixSize = size(matrix);
+
+                % Prep to display movie
+                if obj.singleCellFlag
+                    varmat = var(matrix, 0, 3);
+                    pixel = max(varmat(:)); % find pixel with highest variance over time
+                    [x, y] = find(varmat == pixel);
+                    loc = [x, y];
+                    obj.pixelIndex = loc(1, :);
+                    fullPixel = zeros(size(matrix));
+                    for i = 1:matrixSize(3)
+                        fullPixel(:, :, i) = repelem(matrix(obj.pixelIndex(1), obj.pixelIndex(2), i), matrixSize(1), matrixSize(2));
+                    end
+                    fullPixel = uint8(255*fullPixel);
+                    obj.imageMatrix = fullPixel;
+                else
+                    matrix = uint8(255*matrix);
+                    obj.imageMatrix = matrix;
+                    disp('imageMatrix')
+                end
             end
-            
+
             obj.backgroundIntensity = mean(double(obj.imageMatrix(:))/255);
             obj.backgroundFrame = uint8(obj.backgroundIntensity*ones(matrixSize(1), matrixSize(2)));
             disp('background')
-           
+
             epoch.addParameter('movieName',obj.imagePaths{mov_name,1});
             epoch.addParameter('stimulusSet', obj.stimulusSet);
             epoch.addParameter('condition', obj.condition);
@@ -180,11 +185,12 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
             if obj.randomize
                 epoch.addParameter('seed',obj.seed);
             end
-           
+
             if obj.singleCellFlag == 1
                 epoch.addParameter('pixelIndex', obj.pixelIndex)
             end
-        end
+
+        end 
 
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;
