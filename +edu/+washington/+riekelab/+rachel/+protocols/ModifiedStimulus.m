@@ -9,11 +9,11 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
         tailTime = 250                  % Stimulus trailing duration (ms)
         stimulusSet = 'DovesMod';          % The current movie stimulus set %DovesMod, NoiseMod
         onlineAnalysis = 'none'; % Type of online analysis
-        numberOfAverages = uint16(10)   % Number of epochs %9 stimuli (mod and unmod), 10 repeats = 2*9*10
+        numberOfAverages = uint16(180)   % Number of epochs %9 stimuli (mod and unmod), 10 repeats = 2*9*10
         singleCellFlag = false;              %0 for MEA, 1 for single cell mode
         maxPixelVal = double(1);          %what does pixel value of 1 equal in isomerizations/sec at current light level
         condition = 'linear_30';         %'linear_30', 'linear_10', 'linear_3', 'speed_3to10', 'slow_30to10'
-        randomize = true;
+        randomize = false;              
         magnificationFactor = 4;        %for noise - magnify by 13
 
     end
@@ -68,8 +68,13 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                     obj.sequence((ii-1)*length(seq)+(1:length(seq))) = seq;
                 end
                 obj.sequence = obj.sequence(1:obj.numberOfAverages);
-            else
-                obj.sequence = (1:size(obj.imagePaths,1))' * ones(1,num_reps);
+            else %if not randomize - do a set of repeats in a row, reduce the number of times file needs to be loaded
+                obj.sequence = repelem((1:size(obj.imagePaths,1)),floor(num_reps/2));
+                obj.sequence = repmat(obj.sequence, 1, 2);
+                if ~length(obj.sequence) < obj.numberOfAverages
+                    addseq = (1:(obj.numberOfAverages - length(obj.sequence)));
+                    obj.sequence = [obj.sequence, addseq];
+                end
                 obj.sequence = obj.sequence(:);
             end
             
@@ -129,9 +134,10 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
             prepareEpoch@manookinlab.protocols.ManookinLabStageProtocol(obj, epoch);
  
             mov_name = obj.sequence(mod(obj.numEpochsCompleted,length(obj.sequence)) + 1);
-            if mov_name == obj.sequence(mod(obj.numEpochsCompleted-1, length(obj.sequence)) +1)
+
+            if mov_name == obj.sequence(mod(obj.numEpochsCompleted-1,length(obj.sequence)) + 1)
                 disp('using loaded matrix')
-                disp(mov_name)
+
             else
                 obj.movie_name = obj.imagePaths{mov_name,1};
 
@@ -169,12 +175,13 @@ classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
                     obj.imageMatrix = matrix;
                     disp('imageMatrix')
                 end
+
             end
 
             obj.backgroundIntensity = mean(double(obj.imageMatrix(:))/255);
             obj.backgroundFrame = uint8(obj.backgroundIntensity*ones(matrixSize(1), matrixSize(2)));
             disp('background')
-
+           
             epoch.addParameter('movieName',obj.imagePaths{mov_name,1});
             epoch.addParameter('stimulusSet', obj.stimulusSet);
             epoch.addParameter('condition', obj.condition);
