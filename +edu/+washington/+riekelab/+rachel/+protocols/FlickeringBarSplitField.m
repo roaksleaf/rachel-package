@@ -1,4 +1,4 @@
-classdef FlickeringBarStimulus < edu.washington.manookinlab.protocols.ManookinLabStageProtocol
+classdef FlickeringBarSplitField < < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
         uniqueTime = 160000                % Duration of unique noise sequence (ms)
@@ -12,7 +12,7 @@ classdef FlickeringBarStimulus < edu.washington.manookinlab.protocols.ManookinLa
         preTime = 250                      % Pre-stimulus time (ms)
         tailTime = 250                     % Post-stimulus time (ms)
         swapIntervals = [200 5000 10000]   % Possible swap intervals (ms)
-        numberOfAvereages = uint16(20)     % Number of epochs
+        numberOfAverages = uint16(20)     % Number of epochs
         noiseClass = 'Gaussian'             % Draw luminance values using binary, gaussian, uniform distribution
         orientationMode = 'Vertical'        %Direction of split field
         backgroundIntensity = 0.5
@@ -37,11 +37,19 @@ classdef FlickeringBarStimulus < edu.washington.manookinlab.protocols.ManookinLa
         imageMatrix
         nextSwapInterval
         nextSwapFrame
+        numFrames
+        pre_frames
+        unique_frames
+        repeat_frames
+        isMeaRig
+        numEpochsCompleted
+        numEpochsPrepared
+
     end
 
     methods
         function didSetRig(obj)
-            didSetRig@manookinlab.protocols.ManookinLabStageProtocol(obj);
+            didSetRig@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
 
             [obj.amp, obj.ampType] = obj.createDeviceNamesProperty('Amp');
         end
@@ -215,15 +223,15 @@ classdef FlickeringBarStimulus < edu.washington.manookinlab.protocols.ManookinLa
             end
         end
 
-        function a = get.amp2(obj)
-            amps = obj.rig.getDeviceNames('Amp');
-            if numel(amps) < 2
-                a = '(None)';
-            else
-                i = find(~ismember(amps, obj.amp), 1);
-                a = amps{i};
-            end
-        end
+        % function a = get.amp2(obj)
+        %     amps = obj.rig.getDeviceNames('Amp');
+        %     if numel(amps) < 2
+        %         a = '(None)';
+        %     else
+        %         i = find(~ismember(amps, obj.amp), 1);
+        %         a = amps{i};
+        %     end
+        % end
         
         function stimTime = get.stimTime(obj)
             stimTime = obj.uniqueTime + obj.repeatTime;
