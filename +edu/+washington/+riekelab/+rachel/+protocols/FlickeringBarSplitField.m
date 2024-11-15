@@ -165,7 +165,7 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
                                 if frame < obj.unique_frames
                                     variation = obj.noiseStream.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean);
                                 else 
-                                    variation = obj.noiseStream.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean);
+                                    variation = obj.noiseStreamRep.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean);
                                 end
                             end
 
