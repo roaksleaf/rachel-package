@@ -7,7 +7,7 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
         contrast = 0.6                     % Contrast of flickering bars
         baseMean = 0.5                     % mean of total stimulus
         meanOffset = 0.2                   % low mean = base - offset, high mean = base + offset
-        barWidth = uint16(24)                      % Width of each bar (pixels)
+        barWidth = uint16(76)                      % Width of each bar (pixels)
         preTime = 250                      % Pre-stimulus time (ms)
         tailTime = 250                     % Post-stimulus time (ms)
         swapIntervals = [200 5000 10000]   % Possible swap intervals (ms)
@@ -27,7 +27,7 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
         ampType
         noiseClassType = symphonyui.core.PropertyType('char', 'row', {'Gaussian', 'Uniform', 'Binary'})
         orientationModeType = symphonyui.core.PropertyType('char', 'row', {'Vertical', 'Horizontal'})
-        barWidthType = symphonyui.core.PropertyType('uint16', 'row', {1, 2, 4, 6, 8, 12, 24, 38, 76, 114, 228})
+%         barWidthType = symphonyui.core.PropertyType('uint16', 'row', {1, 2, 4, 6, 8, 12, 24, 38, 76, 114, 228})
         currentFrame                        % Current frame being displayed
         numBars                             % Total number of bars in stimulus
         leftOffset                          % Calculated offset for left half
@@ -44,6 +44,9 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
         pre_frames
         unique_frames
         repeat_frames
+        offset_vec_unique
+        offset_vec_rep
+        offset_vec
         time_multiple
         imgSize
         displayWidth
@@ -53,6 +56,10 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
         calcBottomMean
         calcTopMean
         calcLeftMean
+        leftHalf
+        rightHalf
+        imgMat
+        backgroundFrame
 %         calcRightMean
 %         barMask1
 %         barMask2
@@ -70,10 +77,6 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             disp('to prepare run')
             prepareRun@manookinlab.protocols.ManookinLabStageProtocol(obj);
             
-            % Calculate the offsets for the left and right halves
-            obj.leftOffset = -1 * obj.meanOffset;
-            obj.rightOffset = obj.meanOffset;
-            
             obj.displayWidth = obj.canvasSize(1)*2;
             obj.displayHeight = obj.canvasSize(2)*2;
 
@@ -82,8 +85,25 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             elseif strcmp(obj.orientationMode, 'Horizontal')
                 obj.numBars = ceil(obj.displayHeight / obj.barWidth);
             end
+            
+            obj.leftHalf = zeros(obj.displayWidth, obj.displayHeight);
+            obj.rightHalf = zeros(obj.displayWidth, obj.displayHeight);
+            
+            
+            if strcmp(obj.orientationMode, 'Vertical')
+                obj.leftHalf(:, 1:floor(obj.displayWidth/2)) = 1;
+                obj.rightHalf(:, floor(obj.displayWidth/2)+1:end) = 1;
+            elseif strcmp(obj.orientationMode, 'Horizontal')
+                obj.leftHalf(1:floor(obj.displayHeight/2), :) = 1;
+                obj.rightHalf(floor(obj.displayHeight/2)+1:end, :) = 1;
+            end
+            
+            obj.leftHalf = logical(obj.leftHalf);
+            obj.rightHalf = logical(obj.rightHalf);
+            
 
-            obj.numFrames = floor(obj.stimTime * 1e-3 * obj.frameRate)+15;
+%             obj.numFrames = floor(obj.stimTime * 1e-3 * obj.frameRate)+15;
+            obj.numFrames = floor(obj.stimTime * 1e-3 * obj.frameRate);
             obj.pre_frames = round(obj.preTime * 1e-3 * 60.0);
             obj.unique_frames = round(obj.uniqueTime * 1e-3 * 60.0);
             obj.repeat_frames = round(obj.repeatTime * 1e-3 * 60.0);
@@ -93,34 +113,12 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             catch
                 obj.time_multiple = 1.0;
             end
-            
-%             obj.barMask1 = zeros(obj.canvasSize(2)*2, obj.canvasSize(1)*2);
-%              for i=1:2:obj.numBars
-%                 xStart1 = (i-1) * 20 + 1;
-%                 xEnd1 = i * 20;
-%                 if strcmp(obj.orientationMode, 'Vertical')
-%                     obj.barMask1(:, xStart1:xEnd1) = 1;
-%                 elseif strcmp(obj.orientationMode, 'Horizontal')
-%                     obj.barMask1(xStart1:xEnd1, :) = 1;
-%                 end
-%              end
-%             obj.barMask1 = logical(obj.barMask1);
-%             
-%             ct = 0.3*obj.noiseStream.randn(1,ceil(obj.numBars/2));
-%             ct(ct<-1) = -1;
-%             ct(ct>1) = 1;
-% 
-%             variation = ct .* obj.baseMean;
-%             luminances1 = obj.baseMean - variation;
-% 
-%             luminances1 = repelem(luminances1, obj.canvasSize(2)*2, obj.barWidth);
-%             fprintf('lum: %d %d \n', size(luminances1, 1), size(luminances1,2));
-%             fprintf('bars: %d \n', obj.numBars);
-%             fprintf('bw: %d \n', obj.barWidth);
+
         end
         
         function p = createPresentation(obj)
-
+            disp('create Pres called')
+            fprintf('mat size: %d %d %d \n',size(obj.imgMat,1), size(obj.imgMat,2), size(obj.imgMat,3));
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3 * obj.time_multiple);
             p.setBackgroundColor(obj.backgroundIntensity);
 
@@ -130,8 +128,6 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             bars.position = obj.canvasSize/2;
             bars.position = bars.position + [obj.xOffset obj.yOffset];
             fprintf('CS: %d %d \n', obj.canvasSize(1), obj.canvasSize(2));
-%             fprintf('IM: %d %d \n', size(obj.imageMatrix,1), size(obj.imageMatrix,2));
-%             fprintf('BM1: %d %d \n', size(obj.barMask1,1), size(obj.barMask1,2));
             
             bars.size = [size(obj.imageMatrix,1) size(obj.imageMatrix,2)];
             
@@ -139,127 +135,122 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             bars.setMagFunction(GL.NEAREST);
 
             p.addStimulus(bars);
-
+            
+            
             barsVisible = stage.builtin.controllers.PropertyController(bars, 'visible', ...
                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
             p.addController(barsVisible);
-
-            preF = floor(obj.preTime/1000 * 60);
-
-            imgController = stage.builtin.controllers.PropertyController(bars, 'imageMatrix',...
-                    @(state)generateFlickeringBars(obj, state.frame - preF));
-
-            % Add the stimulus to the presentation
-            p.addController(imgController);
             
-            function stimdisplay = generateFlickeringBars(obj, frame)
+            preF = floor(obj.preTime/1000 * 60);
+            imgController = stage.builtin.controllers.PropertyController(bars,...
+                'imageMatrix', @(state)getBarsFrame(obj, state.frame - preF));
+            % Add the frame controller.
+            p.addController(imgController);
+            disp('frame controller added')
+
+            function stimdisplay = getBarsFrame(obj, frame)
                 persistent M
-                if frame == obj.nextSwapFrame
-                    [obj.leftOffset, obj.rightOffset] = deal(obj.rightOffset, obj.leftOffset); % swap offsets
-                    
-                    if frame < obj.unique_frames
-                        chooseSwap = obj.intervalStream.rand;
-                    else 
-                        chooseSwap = obj.intervalStreamRep.rand;
-                    end
-                    
-                    if chooseSwap > 0.66666
-                        obj.nextSwapInterval = obj.swapIntervals(3);
-                    elseif (.33333 <= chooseSwap) && (chooseSwap <= .66666)
-                        obj.nextSwapInterval = obj.swapIntervals(2);
-                    else 
-                        obj.nextSwapInterval = obj.swapIntervals(1);
-                    end
-                    obj.nextSwapFrame = obj.nextSwapFrame + ceil(obj.nextSwapInterval/1000 * obj.frameRate);
-                end
-                
                 if frame > 0
-                    M = obj.baseMean * ones(obj.canvasSize(2)*2, obj.canvasSize(1)*2); %even this line with no other computation is low frame rate
-                    if mod(frame, obj.frameDwell) == 0
-                        M = obj.baseMean * ones(obj.canvasSize(2)*2, obj.canvasSize(1)*2); 
-                        
-                        if strcmp(obj.noiseClass, 'Gaussian')
-                            
-                            if frame < obj.unique_frames
-                                ct = 0.3*obj.noiseStream.randn(1,ceil(obj.numBars/2));
-                            else 
-                                ct = 0.3*obj.noiseStreamRep.randn(1,ceil(obj.numBars/2));
-                            end
-% 
-                            ct(ct<-1) = -1;
-                            ct(ct>1) = 1;
-                            variation = ct .* obj.baseMean;
-                            
-                        elseif strcmp(obj.noiseClass, 'Binary')
-                            
-                            if frame < obj.unique_frames
-                                variation = obj.contrast * (obj.noiseStream.rand(1,ceil(obj.numBars/2)) > 0.5) - (obj.baseMean - obj.meanOffset);
-                            else
-                                variation = obj.contrast * (obj.noiseStreamRep.rand(1,ceil(obj.numBars/2)) > 0.5) - (obj.baseMean - obj.meanOffset);
-                            end
-                            
-                        elseif strcmp(obj.noiseClass, 'Uniform') %for some reason this condition doesn't work with noiseStream
-                            sz = [1 ceil(obj.numBars/2)];
-                            if frame < obj.unique_frames
-                                
-                                variation = obj.noiseStream.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
-%                                 variation = unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
-                            else
-                                variation = obj.noiseStreamRep.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
-                                
-                            end
-                        end
-                        
-                        luminances1 = obj.baseMean + variation;
-                        luminances2 = obj.baseMean + variation;
-
-                        allLum = [luminances1;luminances2];
-                        allLum = allLum(:)';
-
-                        allLum = repelem(allLum, obj.canvasSize(2)*2, obj.barWidth);
-
-                        M = allLum;
-                        
-                    end
-                else
+                    M = obj.imgMat(:, :, frame);
+                else 
                     M = obj.imageMatrix;
                 end
-%                 
-                if strcmp(obj.orientationMode, 'Vertical')
-                    width = obj.canvasSize(1)*2;
-                    M(:, 1:floor(width/2)) =  M(:, 1:floor(width/2)) + obj.leftOffset;
-%                     obj.calcLeftMean = mean(M(:, 1:floor(width/2)), 'all');
-                    M(:, floor(width/2)+1:end) = M(:, floor(width/2)+1:end) + obj.rightOffset;
-%                     obj.calcRightMean = mean(M(:, floor(width/2)+1:end), 'all');
-
-                elseif strcmp(obj.orientationMode, 'Horizontal')
-                    height = obj.canvasSize(2)*2;
-                    M(1:floor(height/2), :) = M(1:floor(height/2), :) + obj.leftOffset;
-%                     obj.calcBottomMean = mean(M(1:floor(height/2), :), 'all');
-                    M(floor(height/2)+1:end, :) = M(floor(height/2)+1:end, :) + obj.rightOffset;
-%                     obj.calcTopMean = mean(M(floor(height/2)+1:end, :), 'all');
-                end
-                
-%                 obj.numClipped = sum(M(M<0), 'all') + sum(M(M>1),'all');
-                
                 M = max(0, min(1,M));
-                
-                stimdisplay = uint8(255*M);
+                stimdisplay=uint8(255*M);
             end
 
-            disp('create presentation')
-%             fprintf('numClipped: %d', obj.numClipped)
-%             if strcmp(obj.orientationMode, 'Vertical')
-%                 fprintf('left mean: %d', obj.calcLeftMean)
-%                 fprintf('right mean: %d', obj.calcRightMean)
-%             else 
-%                 height = obj.canvasSize(2)*2;
-%                 fprintf('bottom mean: %d', obj.calcBottomMean)
-%                 fprintf('top mean: %d', obj.calcTopMean)
+
+%             
+
+%             imgController = stage.builtin.controllers.PropertyController(bars, 'imageMatrix',...
+%                     @(state)generateFlickeringBars(obj, state.frame - preF));
+
+            % Add the stimulus to the presentation
+%             p.addController(imgController);
+% %             
+%             function stimdisplay = generateFlickeringBars(obj, frame)
+%                 persistent M
+% %                 if frame == obj.nextSwapFrame
+% %                     [obj.leftOffset, obj.rightOffset] = deal(obj.rightOffset, obj.leftOffset); % swap offsets
+% %                     
+% %                     if frame < obj.unique_frames
+% %                         chooseSwap = obj.intervalStream.rand;
+% %                     else 
+% %                         chooseSwap = obj.intervalStreamRep.rand;
+% %                     end
+% %                     
+% %                     if chooseSwap > 0.66666
+% %                         obj.nextSwapInterval = obj.swapIntervals(3);
+% %                     elseif (.33333 <= chooseSwap) && (chooseSwap <= .66666)
+% %                         obj.nextSwapInterval = obj.swapIntervals(2);
+% %                     else 
+% %                         obj.nextSwapInterval = obj.swapIntervals(1);
+% %                     end
+% %                     obj.nextSwapFrame = obj.nextSwapFrame + ceil(obj.nextSwapInterval/1000 * obj.frameRate);
+% %                 end
+%                 
+%                 if frame > 0
+% %                     M = obj.baseMean * ones(obj.canvasSize(2)*2, obj.canvasSize(1)*2); %even this line with no other computation is low frame rate
+% %                     if mod(frame, obj.frameDwell) == 0
+% %                         M = obj.baseMean * ones(obj.canvasSize(2)*2, obj.canvasSize(1)*2); 
+% %                         
+% %                         if strcmp(obj.noiseClass, 'Gaussian')
+% %                             
+% %                             if frame < obj.unique_frames
+% %                                 ct = 0.3*obj.noiseStream.randn(1,ceil(obj.numBars/2));
+% %                             else 
+% %                                 ct = 0.3*obj.noiseStreamRep.randn(1,ceil(obj.numBars/2));
+% %                             end
+% % % 
+% %                             ct(ct<-1) = -1;
+% %                             ct(ct>1) = 1;
+% %                             variation = ct .* obj.baseMean;
+% %                             
+% %                         elseif strcmp(obj.noiseClass, 'Binary')
+% %                             
+% %                             if frame < obj.unique_frames
+% %                                 variation = obj.contrast * (obj.noiseStream.rand(1,ceil(obj.numBars/2)) > 0.5) - (obj.baseMean - obj.meanOffset);
+% %                             else
+% %                                 variation = obj.contrast * (obj.noiseStreamRep.rand(1,ceil(obj.numBars/2)) > 0.5) - (obj.baseMean - obj.meanOffset);
+% %                             end
+% %                             
+% %                         elseif strcmp(obj.noiseClass, 'Uniform') %for some reason this condition doesn't work with noiseStream
+% %                             sz = [1 ceil(obj.numBars/2)];
+% %                             if frame < obj.unique_frames
+% %                                 
+% %                                 variation = obj.noiseStream.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
+% % %                                 variation = unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
+% %                             else
+% %                                 variation = obj.noiseStreamRep.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
+% %                                 
+% %                             end
+% %                         end
+%                         
+% %                         luminances1 = obj.baseMean + variation;
+% %                         luminances2 = obj.baseMean - variation;
+% % 
+% %                         allLum = [luminances1;luminances2];
+% %                         allLum = allLum(:)';
+% 
+%                         
+% %                     if strcmp(obj.orientationMode, 'Vertical')
+% %                         M = repelem(obj.imgMat(:, frame), obj.canvasSize(2)*2, obj.barWidth);
+% %                     else
+% %                         M = repelem(obj.imgMat(:, frame), obj.barWidth, obj.canvasSize(1)*2);
+% %                     end
+% % 
+% %                     M(obj.leftHalf) = M(obj.leftHalf) + obj.offset_vec(1, frame);
+% %                     M(obj.rightHalf) = M(obj.rightHalf) + obj.offset_vec(2, frame);
+% 
+%                 else
+%                     M = obj.imageMatrix;
+%                 end
+%                 M = max(0, min(1,M));
+%                 
+%                 stimdisplay = uint8(255*M);
 %             end
-%             if strcmp(obj.noiseClass, 'Gaussian')
-%                 fprintf('numClippedGaus: %d', obj.numClippedGauss)
-%             end
+% 
+%             disp('create presentation')
         end
         
 
@@ -288,16 +279,124 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             obj.intervalStream = RandStream('mt19937ar', 'Seed', obj.seed);
             obj.noiseStreamRep = RandStream('mt19937ar', 'Seed', 1);
             obj.intervalStreamRep = RandStream('mt19937ar', 'Seed', 1);
+
+            % Calculate the offsets for the left and right halves
+            obj.leftOffset = -1 * obj.meanOffset;
+            obj.rightOffset = obj.meanOffset;
+%             
+            obj.offset_vec_unique = zeros(2, obj.unique_frames);
+            obj.offset_vec_rep = zeros(2, obj.repeat_frames);
+            origLeft = obj.leftOffset;
+            origRight = obj.rightOffset;
             
-            chooseSwap = obj.intervalStream.rand;
-            if chooseSwap > .66666
-                obj.nextSwapInterval = obj.swapIntervals(3);
-            elseif (.33333 <= chooseSwap) && (chooseSwap <= .66666)
-                obj.nextSwapInterval = obj.swapIntervals(2);
-            else 
-                obj.nextSwapInterval = obj.swapIntervals(1);
+            swaps = [];
+            nIntervals = numel(obj.swapIntervals);
+            obj.nextSwapFrame = 0;
+            while obj.nextSwapFrame < obj.unique_frames
+                choice = ceil((obj.swapIntervals(ceil(obj.intervalStream.rand*nIntervals))/1000)) * obj.frameRate;
+                obj.nextSwapFrame = obj.nextSwapFrame + choice;
+                swaps(end+1) = obj.nextSwapFrame;
             end
-            obj.nextSwapFrame = ceil(obj.nextSwapInterval/1000 * obj.frameRate);
+            rep_swaps = [];
+            obj.nextSwapFrame = 0;
+            while obj.nextSwapFrame < obj.repeat_frames
+                choice = ceil((obj.swapIntervals(ceil(obj.intervalStreamRep.rand*nIntervals))/1000)) * obj.frameRate;
+                obj.nextSwapFrame = obj.nextSwapFrame + choice;
+                rep_swaps(end + 1) = obj.nextSwapFrame;
+            end
+
+            obj.offset_vec_unique(1, 1:swaps(1)) = obj.leftOffset;
+            obj.offset_vec_unique(2, 1:swaps(1)) = obj.rightOffset;
+            for i = 2:numel(swaps)
+                [obj.leftOffset, obj.rightOffset] = deal(obj.rightOffset, obj.leftOffset); % swap offsets
+                if swaps(i) <= obj.unique_frames
+                    obj.offset_vec_unique(1, swaps(i-1):swaps(i)) = obj.leftOffset;
+                    obj.offset_vec_unique(2, swaps(i-1):swaps(i)) = obj.rightOffset;
+                else 
+                    obj.offset_vec_unique(1, swaps(i-1):end) = obj.leftOffset;
+                    obj.offset_vec_unique(2, swaps(i-1):end) = obj.rightOffset;
+                    break
+                end
+            end
+
+            obj.leftOffset = origLeft;
+            obj.rightOffset = origRight;
+
+            obj.offset_vec_rep(1, 1:rep_swaps(1)) = obj.leftOffset;
+            obj.offset_vec_rep(2, 1:rep_swaps(1)) = obj.rightOffset;
+            for i = 2:numel(rep_swaps)
+                [obj.leftOffset, obj.rightOffset] = deal(obj.rightOffset, obj.leftOffset); % swap offsets
+                if rep_swaps(i) <= obj.repeat_frames
+                    obj.offset_vec_rep(1, rep_swaps(i-1):rep_swaps(i)) = obj.leftOffset;
+                    obj.offset_vec_rep(2, rep_swaps(i-1):rep_swaps(i)) = obj.rightOffset;
+                else
+                    obj.offset_vec_rep(1, rep_swaps(i-1):end) = obj.leftOffset;
+                    obj.offset_vec_rep(2, rep_swaps(i-1):end) = obj.rightOffset;
+                    break
+                end
+            end
+
+            obj.offset_vec = [obj.offset_vec_unique obj.offset_vec_rep];
+            
+            obj.imgMat = zeros(obj.canvasSize(2)*2, obj.canvasSize(1)*2, obj.numFrames);
+            for f = 1:obj.numFrames
+                if mod(f, obj.frameDwell) == 0
+                    if strcmp(obj.noiseClass, 'Gaussian')
+                        if f < obj.unique_frames
+                            ct = 0.3*obj.noiseStream.randn(1,ceil(obj.numBars/2));
+                        else 
+                            ct = 0.3*obj.noiseStreamRep.randn(1,ceil(obj.numBars/2));
+                        end
+        % 
+                        ct(ct<-1) = -1;
+                        ct(ct>1) = 1;
+                        variation = ct .* obj.baseMean;
+
+                    elseif strcmp(obj.noiseClass, 'Binary')
+
+                        if f < obj.unique_frames
+                            variation = obj.contrast * (obj.noiseStream.rand(1,ceil(obj.numBars/2)) > 0.5) - (obj.baseMean - obj.meanOffset);
+                        else
+                            variation = obj.contrast * (obj.noiseStreamRep.rand(1,ceil(obj.numBars/2)) > 0.5) - (obj.baseMean - obj.meanOffset);
+                        end
+
+                    elseif strcmp(obj.noiseClass, 'Uniform') %for some reason this condition doesn't work with noiseStream
+                        sz = [1 ceil(obj.numBars/2)];
+                        if f < obj.unique_frames
+
+                            variation = obj.noiseStream.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
+        %                                 variation = unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
+                        else
+                            variation = obj.noiseStreamRep.unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
+
+                        end
+                    end
+                    
+                    luminances1 = obj.baseMean + variation;
+                    luminances2 = obj.baseMean - variation;
+
+                    allLum = [luminances1;luminances2];
+                    allLum = allLum(:)';
+
+                    if strcmp(obj.orientationMode, 'Vertical')
+                        fullmat = repelem(allLum, obj.canvasSize(2)*2, obj.barWidth);
+                    else
+                        fullmat = repelem(allLum, obj.barWidth, obj.canvasSize(1)*2);
+                    end
+
+                    fullmat(obj.leftHalf) = fullmat(obj.leftHalf) + obj.offset_vec(1, f);
+                    fullmat(obj.rightHalf) = fullmat(obj.rightHalf) + obj.offset_vec(2, f);
+
+                    obj.imgMat(:, :, f) = fullmat;
+                else 
+                    obj.imgMat(:, :, f) = obj.imgMat(:,:, f-1);
+                end
+            end
+            
+            matrixSize = size(obj.imgMat);
+            
+            obj.backgroundFrame = uint8(obj.backgroundIntensity*ones(matrixSize(1), matrixSize(2)));
+
 
             % Save all parameters for this epoch
             epoch.addParameter('uniqueTime', obj.uniqueTime);
