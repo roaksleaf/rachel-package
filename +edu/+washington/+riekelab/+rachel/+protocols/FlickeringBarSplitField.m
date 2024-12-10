@@ -69,8 +69,10 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             disp('to prepare run')
             prepareRun@manookinlab.protocols.ManookinLabStageProtocol(obj);
 
-            obj.unique_frames = floor(obj.uniqueTime * 1e-3 * 60.0);
-            obj.repeat_frames = floor(obj.repeatTime * 1e-3 * 60.0);
+            obj.unique_frames = floor(obj.uniqueTime * 1e-3 * obj.frameRate);
+            obj.repeat_frames = floor(obj.repeatTime * 1e-3 * obj.frameRate);
+%             obj.preFrames = floor(obj.preTime * 1e-3 * obj.frameRate);
+%             obj.tailFrames = floor(obj.tailTime * 1e-3 * obj.frameRate);
             
             try
                 obj.time_multiple = obj.rig.getDevice('Stage').getExpectedRefreshRate() / obj.rig.getDevice('Stage').getMonitorRefreshRate();
@@ -85,13 +87,10 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3 * obj.time_multiple);
             p.setBackgroundColor(obj.backgroundIntensity);
 
-            initMatrix = obj.backgroundIntensity .* ones(obj.canvasSize(2)*2, obj.canvasSize(1)*2);
-            initMatrix = uint8(255 .* initMatrix);
-            
             disp('pre builtin.Image')
-            bars = stage.builtin.stimuli.Image(initMatrix);
+            bars = stage.builtin.stimuli.Image(obj.imageMatrix(:, :, 1));
             disp('post builtin.Image')
-            bars.size = [size(initMatrix,1) size(initMatrix,2)];
+            bars.size = [size(obj.imageMatrix,1) size(obj.imageMatrix,2)];
             bars.position = obj.canvasSize/2;
             bars.position = bars.position + [obj.xOffset obj.yOffset];
 
@@ -99,23 +98,30 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             bars.setMagFunction(GL.NEAREST);
 
             p.addStimulus(bars);
-                       
-            
-            disp('pre frame controller')
-            barsController = stage.builtin.controllers.PropertyController(bars,...
-                'imageMatrix', @(state)getNewBars(obj, state.frame+1));
-            % Add the frame controller.
-            p.addController(barsController);
-            disp('frame controller added')
+            disp('add bars')
             
             barsVisible = stage.builtin.controllers.PropertyController(bars, 'visible', ...
                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(barsVisible);
-            
-            function i = getNewBars(obj, frame)
-                i = uint8(255 * obj.imageMatrix(:, :, frame));
+%             p.addController(barsVisible);  %%%Adding either controller
+%             causes both stage and symphony to crash on run
+%             
+            preF = floor(obj.preTime/1000 * obj.frameRate);
+            stimF = floor(obj.stimTime/1000 * obj.frameRate);
+%                        
+            disp('pre frame controller')
+            barsController = stage.builtin.controllers.PropertyController(bars,...
+                'imageMatrix', @(state)getNewBars(obj, state.frame - preF, stimF));
+%             p.addController(barsController); %%%Adding either controller
+%             causes both stage and symphony to crash on run
+            disp('frame controller added')
+%             
+            function i = getNewBars(obj, frame, stimFrames)
+                if frame > 0 && frame <= stimFrames
+                    i = obj.imageMatrix(:, :, frame);
+                else
+                    i = obj.imageMatrix(:, :, 1);
+                end
             end
-
         end
         
 
@@ -141,8 +147,10 @@ classdef FlickeringBarSplitField < manookinlab.protocols.ManookinLabStageProtoco
             end
             
             disp('pre util function')
-            obj.imageMatrix = util.getFlickeringBarsFrame(obj.seed, obj.baseMean, obj.meanOffset, obj.barWidth, obj.contrast, obj.unique_frames, obj.repeat_frames, obj.frameRate, obj.swapIntervals, obj.canvasSize, obj.frameDwell, obj.preTime, obj.tailTime, obj.noiseClass, obj.orientationMode);
+%             obj.imageMatrix = util.getFlickeringBarsFrame(obj.seed, obj.baseMean, obj.meanOffset, obj.barWidth, obj.contrast, obj.unique_frames, obj.repeat_frames, obj.frameRate, obj.swapIntervals, obj.canvasSize, obj.frameDwell, obj.preTime, obj.tailTime, obj.noiseClass, obj.orientationMode);
             disp('post util function')
+            obj.imageMatrix = ones(obj.canvasSize(2)*2, obj.canvasSize(1)*2, (obj.repeat_frames + obj.unique_frames));
+            obj.imageMatrix = uint8(255 .* obj.baseMean .* obj.imageMatrix);
 
 
             % Save all parameters for this epoch

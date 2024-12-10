@@ -45,8 +45,8 @@ function frameValues = getFlickeringBarsFrame(seed, baseMean, meanOffset, barWid
         end
     end
     
-    obj.leftOffset = origLeft;
-            obj.rightOffset = origRight;
+    leftOffset = origLeft;
+    rightOffset = origRight;
 
     offset_vec_rep(1, 1:rep_swaps(1)) = leftOffset;
     offset_vec_rep(2, 1:rep_swaps(1)) = rightOffset;
@@ -116,7 +116,7 @@ function frameValues = getFlickeringBarsFrame(seed, baseMean, meanOffset, barWid
                 if f < unique_frames
 
                     variation = noiseStream.unifrnd(-1*contrast*baseMean, contrast*baseMean, sz);
-%                                 variation = unifrnd(-1*obj.contrast*obj.baseMean, obj.contrast*obj.baseMean, sz);
+
                 else
                     variation = noiseStreamRep.unifrnd(-1*contrast*baseMean, contrast*baseMean, sz);
 
@@ -140,16 +140,18 @@ function frameValues = getFlickeringBarsFrame(seed, baseMean, meanOffset, barWid
 
             imgMat(:, :, f) = fullmat;
         else 
-            imgMat(:, :, f) = obj.imgMat(:,:, f-1);
+            imgMat(:, :, f) = imgMat(:,:, f-1);
         end
     end
     
-    num_preFrames = floor(preTime * 1e-3 * frameRate);
-    num_tailFrames = floor(tailTime * 1e-3 * frameRate);
+    frameValues = max(0, min(1,imgMat));
     
-    preFrames = baseMean .* ones(canvasSize(2)*2, canvasSize(1)*2, num_preFrames);
-    tailFrames = baseMean .* ones(canvasSize(2)*2, canvasSize(1)*2, num_tailFrames);
-    
-    frameValues = cat(3, preFrames, imgMat, tailFrames);
+%     num_preFrames = floor(preTime * 1e-3 * frameRate);
+%     num_tailFrames = floor(tailTime * 1e-3 * frameRate);
+%     
+%     preFrames = baseMean .* ones(canvasSize(2)*2, canvasSize(1)*2, num_preFrames);
+%     tailFrames = baseMean .* ones(canvasSize(2)*2, canvasSize(1)*2, num_tailFrames);
+%     
+%     frameValues = cat(3, preFrames, imgMat, tailFrames);
 
 end
