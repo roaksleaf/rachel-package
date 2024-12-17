@@ -1,6 +1,6 @@
 % Plays movies...
 % Note: Requires movies in .mp4 format.
-classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
+classdef ModifiedStimulus < 
     
     properties
         amp                             % Output amplifier

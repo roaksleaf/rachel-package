@@ -1,4 +1,4 @@
-classdef CheckerboardNoiseProjectRachel < edu.washington.riekelab.protocols.RiekeLabStageProtocol
+classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
         preTime = 500 % ms
@@ -44,37 +44,19 @@ classdef CheckerboardNoiseProjectRachel < edu.washington.riekelab.protocols.Riek
         end
          
         function prepareRun(obj)
-            prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
-
+            prepareRun@manookinlab.protocols.ManookinLabStageProtocol(obj);
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
-                obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
-            if ~strcmp(obj.onlineAnalysis,'none')
-                obj.showFigure('edu.washington.riekelab.turner.figures.StrfFigure',...
-                obj.rig.getDevice(obj.amp),obj.rig.getDevice('Frame Monitor'),...
-                obj.rig.getDevice('Stage'),...
-                'recordingType',obj.onlineAnalysis,...
-                'preTime',obj.preTime,'stimTime',obj.stimTime,...
-                'frameDwell',obj.frameDwell,'binaryNoise',obj.binaryNoise);
-            end
-            
             %get number of checkers...
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             %convert from microns to pixels...
             stixelSizePix = obj.rig.getDevice('Stage').um2pix(obj.stixelSize);
             obj.numChecksX = round(canvasSize(1) / stixelSizePix);
             obj.numChecksY = round(canvasSize(2) / stixelSizePix);
-            obj.dimBackground = 0;
-
          end
         
         function prepareEpoch(obj, epoch)
             fprintf(1, 'start prepare epoc\n');
-            prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
-            device = obj.rig.getDevice(obj.amp);
-            duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
-            epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
-            epoch.addResponse(device);
+            prepareEpoch@manookinlab.protocols.ManookinLabStageProtocol(obj, epoch);
             
             % Alternating seed for each epoch
             if obj.useFixedSeed
@@ -82,7 +64,7 @@ classdef CheckerboardNoiseProjectRachel < edu.washington.riekelab.protocols.Riek
             else
                 obj.noiseSeed = randi(2^32 - 1);
             end
-            obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+%             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
             
             % Toggle the seed usage for the next epoch
             obj.useFixedSeed = ~obj.useFixedSeed;
@@ -91,10 +73,11 @@ classdef CheckerboardNoiseProjectRachel < edu.washington.riekelab.protocols.Riek
             obj.backgroundFrameDwell = obj.backgroundFrameDwells(mod(obj.numEpochsCompleted,length(obj.backgroundFrameDwells))+1);
             
             %at start of epoch, set random stream
-            obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+%             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
             epoch.addParameter('noiseSeed', obj.noiseSeed);
             epoch.addParameter('numChecksX', obj.numChecksX);
             epoch.addParameter('numChecksY', obj.numChecksY);
+            epoch.addParameter('backgroundFrameDwell', obj.backgroundFrameDwell);
             fprintf(1, 'end prepare epoc\n');
          end
 
@@ -107,7 +90,7 @@ classdef CheckerboardNoiseProjectRachel < edu.washington.riekelab.protocols.Riek
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
-            
+
             % Create checkerboard
             initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
             board = stage.builtin.stimuli.Image(initMatrix);
@@ -117,13 +100,11 @@ classdef CheckerboardNoiseProjectRachel < edu.washington.riekelab.protocols.Riek
             board.setMinFunction(GL.NEAREST); %don't interpolate to scale up board
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
-            preFrames = round(60 * (obj.preTime/1e3));
-            stmFrames = round(60 * (obj.stimTime/1e3));
-            tailFrames = round(60 * (obj.tailTime/1e3));
 
-            totFrames = preFrames + stmFrames + tailFrames;
-            
-            getCheckerboardLines(obj, preFrames, stmFrames, tailFrames)
+            disp('pre lineMatcall')
+            obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
+                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.backgroundRatio, obj.backgroundFrameDwell, 1);
+            disp('post line mat call')
             
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(obj, state.frame+1));
@@ -143,60 +124,8 @@ classdef CheckerboardNoiseProjectRachel < edu.washington.riekelab.protocols.Riek
             boardVisible = stage.builtin.controllers.PropertyController(board, 'visible', ...
                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
             p.addController(boardVisible); 
-            
-            function getCheckerboardLines(obj, preFrames, stmFrames, tailFrames)
-                obj.lineMatrix = zeros(obj.numChecksX,preFrames+stmFrames+tailFrames);
-                for frame = 1:preFrames + stmFrames
-                    obj.lineMatrix(:, frame) = obj.backgroundIntensity;
-                end
-                Indices = [1:floor(obj.numChecksX/2)]*2;
-                for frame = preFrames+1:preFrames+stmFrames
-                    if mod(frame-preFrames, obj.frameDwell) == 0 %noise update
-                        if (obj.binaryNoise)
-                            obj.lineMatrix(:, frame) = 2 *obj.backgroundIntensity * ...
-                                (obj.noiseStream.rand(obj.numChecksX, 1) > 0.5);
-                        else
-                            obj.lineMatrix(:, frame) = obj.backgroundIntensity + ...
-                                obj.noiseStdv * obj.backgroundIntensity * ...
-                                obj.noiseStream.randn(obj.numChecksX, 1);
-                        end
-                    else
-                        obj.lineMatrix(:, frame) = obj.lineMatrix(:, frame-1);
-                    end
-                    if (obj.pairedBars)
-                        obj.lineMatrix(Indices, frame) = -(obj.lineMatrix(Indices-1, frame)-obj.backgroundIntensity)+ ...
-                            obj.backgroundIntensity;
-                    end
-%                     if (mod(frame-preFrames, obj.backgroundFrameDwell) == 0)
-%                         Indices = [1:floor(obj.numChecksX/2)];
-%                         obj.lineMatrix(Indices, frame) = obj.lineMatrix(Indices, frame) * obj.backgroundRatio;
-%                         if (obj.dimBackground == 0)
-%                             obj.dimBackground = 1;
-%                         else
-%                             obj.dimBackground = 0;
-%                         end
-%                     end
-                    if mod(frame-preFrames, obj.backgroundFrameDwell) == 0
-                        if (obj.dimBackground == 0)
-                            obj.dimBackground = 1;
-                        else
-                            obj.dimBackground = 0;
-                        end
-                    end
-                    Indices1 = [1:floor(obj.numChecksX/2)];
-                    Indices2 = [floor(obj.numChecksX/2):obj.numChecksX];
-                    if obj.dimBackground == 0
-                        obj.lineMatrix(Indices1, frame) = obj.lineMatrix(Indices1, frame) - obj.backgroundRatio;
-                        obj.lineMatrix(Indices2, frame) = obj.lineMatrix(Indices2, frame) + obj.backgroundRatio;
-                    else
-                        obj.lineMatrix(Indices1, frame) = obj.lineMatrix(Indices1, frame) + obj.backgroundRatio;
-                        obj.lineMatrix(Indices2, frame) = obj.lineMatrix(Indices2, frame) - obj.backgroundRatio;
-                    end
-                end
-                for frame = preFrames + stmFrames + 1:preFrames + stmFrames + tailFrames
-                    obj.lineMatrix(:, frame) = obj.backgroundIntensity;
-                end
-            end
+          
+            disp('post board visible')
 
             function i = getNewCheckerboard(obj, frame)
                 line = obj.lineMatrix(:, frame);
@@ -212,6 +141,10 @@ classdef CheckerboardNoiseProjectRachel < edu.washington.riekelab.protocols.Riek
         
         function tf = shouldContinueRun(obj)
             tf = obj.numEpochsCompleted < obj.numberOfAverages;
+        end
+        
+        function completeRun(obj)
+            completeRun@manookinlab.protocols.ManookinLabStageProtocol(obj);
         end
     end
     
