@@ -10,7 +10,7 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         noiseStdv = 0.3 %contrast, as fraction of mean
         frameDwell = 1 % Frames per noise update
         backgroundFrameDwells = [30 120 750] % Frames per noise update
-        backgroundRatios = [0.2]
+        backgroundRatios = [0.3 0.3]
         apertureDiameter = 0 % um
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
@@ -74,7 +74,7 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
             obj.backgroundFrameDwell = obj.backgroundFrameDwells(mod(obj.numEpochsCompleted,length(obj.backgroundFrameDwells))+1);
 
             %Choose next background ratio
-            obj.backgroundRatio = obj.backgroundRatios(mod(obj.numEpochsCompleted, length(obj.backgroundFrameDwells))+1);
+            obj.backgroundRatio = obj.backgroundRatios(mod(obj.numEpochsCompleted, length(obj.backgroundRatios))+1);
             
             %at start of epoch, set random stream
 %             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
