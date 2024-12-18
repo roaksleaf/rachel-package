@@ -4,17 +4,17 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         preTime = 500 % ms
         stimTime = 20000 % ms
         tailTime = 500 % ms
-        stixelSize = 30 % um
+        stixelSize = 60 % um
         binaryNoise = true %binary checkers - overrides noiseStdv
         pairedBars = true
         noiseStdv = 0.3 %contrast, as fraction of mean
         frameDwell = 1 % Frames per noise update
-        backgroundFrameDwells = [10 20 30 60] % Frames per noise update
-        backgroundRatio = 0.2
+        backgroundFrameDwells = [30 120 750] % Frames per noise update
+        backgroundRatios = [0.2]
         apertureDiameter = 0 % um
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(20) % number of epochs to queue
+        numberOfAverages = uint16(60) % number of epochs to queue
         amp % Output amplifier
         xOffset = -58 %offset of image to move split field, in pixels, default is equal sides with frame monitor for vert bars
         yOffset = 0 %offset of image to move split field, in pixels
@@ -34,6 +34,7 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         loadedFilter            % Loaded linear filter from .mat file
         useFixedSeed = true     % Toggle between fixed and random seeds
         backgroundFrameDwell
+        backgroundRatio
     end
     
     methods
@@ -71,6 +72,9 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
             
             %Choose next background frame dwell 
             obj.backgroundFrameDwell = obj.backgroundFrameDwells(mod(obj.numEpochsCompleted,length(obj.backgroundFrameDwells))+1);
+
+            %Choose next background ratio
+            obj.backgroundRatio = obj.backgroundRatios(mod(obj.numEpochsCompleted, length(obj.backgroundFrameDwells))+1);
             
             %at start of epoch, set random stream
 %             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
@@ -78,6 +82,7 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
             epoch.addParameter('numChecksX', obj.numChecksX);
             epoch.addParameter('numChecksY', obj.numChecksY);
             epoch.addParameter('backgroundFrameDwell', obj.backgroundFrameDwell);
+            epoch.addParameter('backgroundRatio', obj.backgroundRatio)
             fprintf(1, 'end prepare epoc\n');
          end
 

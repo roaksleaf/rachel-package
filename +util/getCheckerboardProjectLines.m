@@ -15,7 +15,7 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
     for frame = preFrames+1:preFrames+stmFrames
         if mod(frame-preFrames, frameDwell) == 0 %noise update
             if binaryNoise == 1
-                maxVar = 0.8 - backgroundIntensity;
+                maxVar = (1-backgroundRatio) - backgroundIntensity; %changed from 0.8
                 variation = 2 * maxVar * ...
                     (noiseStream.rand(numChecksX, 1) > 0.5) - (maxVar);
                 lineMatrix(:, frame) = 0.5 + variation;
