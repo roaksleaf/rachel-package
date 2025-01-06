@@ -113,11 +113,13 @@ classdef NaturalImageFlashPlusNoiseMEAVersion < manookinlab.protocols.ManookinLa
             %     edu.washington.riekelab.turner.protocols.NaturalImageFlashProtocol.getImagePatchMatrix(...
             %     obj, obj.currentPatchLocation);
 
-            obj.imageIndex = obj.sequence(mod(obj.numEpochsCompleted, length(obj.sequence))+1);
-            if obj.imageIndex == obj.sequence(mod(obj.numEpochsCompleted-1,length(obj.sequence)) + 1)
+            imgIndex = obj.sequence(mod(obj.numEpochsCompleted, length(obj.sequence))+1);
+            if imgIndex == obj.sequence(mod(obj.numEpochsCompleted-1,length(obj.sequence)) + 1)
                 disp('using loaded matrix')
+
             else
-                obj.imageName = obj.imagePaths{imgIndex,1};
+                obj.imgIndex = obj.imagePaths{mov_name,1};
+
                 % load file
                 disp(obj.directory)
                 disp(obj.movie_name)
@@ -134,8 +136,7 @@ classdef NaturalImageFlashPlusNoiseMEAVersion < manookinlab.protocols.ManookinLa
             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
 
             epoch.addParameter('noiseSeed', obj.noiseSeed);
-            epoch.addParameter('imageIndex', obj.imageIndex);
-            epoch.addParameter('imageName', obj.imageName);
+            epoch.addParameter('imageIndex', obj.imgIndex);
             % epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
         end
         
@@ -144,10 +145,10 @@ classdef NaturalImageFlashPlusNoiseMEAVersion < manookinlab.protocols.ManookinLa
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
             
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
-            % apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
+            apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             
             % Create image
-            initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(size(obj.imageMatrix))));
+            initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(size(obj.imagePatchMatrix))));
             board = stage.builtin.stimuli.Image(initMatrix);
             board.size = canvasSize;
             board.position = canvasSize/2;
@@ -156,7 +157,7 @@ classdef NaturalImageFlashPlusNoiseMEAVersion < manookinlab.protocols.ManookinLa
             p.addStimulus(board);
             preFrames = round(60 * (obj.preTime/1e3));
             flashDurFrames = round(60 * ((obj.preTime + obj.flashTime + obj.tailTime))/1e3);
-            imageController = stage.builtin.controllers.PropertyController(board, 'imageNoiseMatrix',...
+            imageController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewImage(obj, state.frame, preFrames, flashDurFrames));
             p.addController(imageController); %add the controller
             
@@ -166,26 +167,26 @@ classdef NaturalImageFlashPlusNoiseMEAVersion < manookinlab.protocols.ManookinLa
                 if curFrame == preFrames
                     noiseMatrix = imgaussfilt(obj.noiseStream.randn(size(obj.imagePatchMatrix)), obj.noiseFilterSD);
                     noiseMatrix = noiseMatrix / std(noiseMatrix(:));
-                    boardMatrix = obj.imageMatrix + uint8(255 * noiseMatrix * obj.backgroundIntensity * obj.noiseContrast);
+                    boardMatrix = obj.imagePatchMatrix + uint8(255 * noiseMatrix * obj.backgroundIntensity * obj.noiseContrast);
                 end
                 if curFrame == 0
-                    boardMatrix = 255 * obj.backgroundIntensity .* ones(size(obj.imageMatrix));
+                    boardMatrix = 255 * obj.backgroundIntensity .* ones(size(obj.imagePatchMatrix));
                 end
                 if curFrame == (flashDurFrames-1)
-                    boardMatrix = 255 * obj.backgroundIntensity .* ones(size(obj.imageMatrix));
+                    boardMatrix = 255 * obj.backgroundIntensity .* ones(size(obj.imagePatchMatrix));
                 end
                 i = uint8(boardMatrix);
             end
 
-            % if (obj.apertureDiameter > 0) %% Create aperture
-            %     aperture = stage.builtin.stimuli.Rectangle();
-            %     aperture.position = canvasSize/2;
-            %     aperture.color = obj.backgroundIntensity;
-            %     aperture.size = [max(canvasSize) max(canvasSize)];
-            %     mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
-            %     aperture.setMask(mask);
-            %     p.addStimulus(aperture); %add aperture
-            % end
+            if (obj.apertureDiameter > 0) %% Create aperture
+                aperture = stage.builtin.stimuli.Rectangle();
+                aperture.position = canvasSize/2;
+                aperture.color = obj.backgroundIntensity;
+                aperture.size = [max(canvasSize) max(canvasSize)];
+                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
+                aperture.setMask(mask);
+                p.addStimulus(aperture); %add aperture
+            end
         end
     
         function stimTime = get.stimTime(obj)
@@ -200,15 +201,15 @@ classdef NaturalImageFlashPlusNoiseMEAVersion < manookinlab.protocols.ManookinLa
             tf = obj.numEpochsCompleted < obj.numberOfAverages;
         end
         
-        % function a = get.amp2(obj)
-        %     amps = obj.rig.getDeviceNames('Amp');
-        %     if numel(amps) < 2
-        %         a = '(None)';
-        %     else
-        %         i = find(~ismember(amps, obj.amp), 1);
-        %         a = amps{i};
-        %     end
-        % end
+        function a = get.amp2(obj)
+            amps = obj.rig.getDeviceNames('Amp');
+            if numel(amps) < 2
+                a = '(None)';
+            else
+                i = find(~ismember(amps, obj.amp), 1);
+                a = amps{i};
+            end
+        end
 
     end
     
