@@ -241,36 +241,40 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % disp('pre lineMatcall')
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
                 obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars);
-            % disp('post line mat call')
+            disp('post line mat call. Line matrix size:')
+            disp(size(obj.lineMatrix));
             
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(obj, state.frame+1));
             p.addController(checkerboardController); %add the controller
-            
-            if (obj.apertureDiameter > 0) %% Create aperture
-                aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2;
-                aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
-                aperture.setMask(mask);
-                p.addStimulus(aperture); %add aperture
-            end
+%             
+%             if (obj.apertureDiameter > 0) %% Create aperture
+%                 aperture = stage.builtin.stimuli.Rectangle();
+%                 aperture.position = canvasSize/2;
+%                 aperture.color = obj.backgroundIntensity;
+%                 aperture.size = [max(canvasSize) max(canvasSize)];
+%                 mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
+%                 aperture.setMask(mask);
+%                 p.addStimulus(aperture); %add aperture
+%             end
             
             % hide during pre & post
-            boardVisible = stage.builtin.controllers.PropertyController(board, 'visible', ...
-                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(boardVisible); 
-          
-            disp('post board visible')
-
+%             boardVisible = stage.builtin.controllers.PropertyController(board, 'visible', ...
+%                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+%             p.addController(boardVisible); 
+%           
+%             disp('post board visible')
+% 
             function i = getNewCheckerboard(obj, frame)
                 % Get fixation index
                 pre_frames = round(60 * (obj.preTime/1e3));
                 tail_frames = round(60 * (obj.tailTime/1e3));
                 n_frames = size(obj.lineMatrix, 2) - pre_frames - tail_frames;
-                n_frames_per_fix = int(n_frames / obj.num_fixations);
-                fixation_index = ceil(frame * n_frames_per_fix/n_frames);
+                n_frames_per_fix = n_frames / obj.num_fixations;
+%                 disp(n_frames)
+%                 disp(n_frames_per_fix);
+                fixation_index = ceil((frame-pre_frames)*(n_frames_per_fix/n_frames));
+%                 fixation_index = int32(fixation_index);
                 disp(['frame: ', num2str(frame), ' fixation_index: ', num2str(fixation_index)]);
                 
                 line = obj.lineMatrix(:, frame);
