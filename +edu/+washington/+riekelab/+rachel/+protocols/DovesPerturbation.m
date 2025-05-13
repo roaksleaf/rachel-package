@@ -230,7 +230,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
 
             % Create checkerboard
-            initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
+            % initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
+            initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(canvasSize(2),canvasSize(1))));
             board = stage.builtin.stimuli.Image(initMatrix);
             board.size = canvasSize;
             board.position = canvasSize/2;
@@ -243,7 +244,11 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars);
             disp('post line mat call. Line matrix size:')
             disp(size(obj.lineMatrix));
-            
+            % Upscale lineMatrix from (numChecksX, frames) to (canvasSize(1), frames)
+            obj.lineMatrix = imresize(obj.lineMatrix, [canvasSize(1), size(obj.lineMatrix, 2)], 'nearest');
+            disp('post upscale. Line matrix size:')
+            disp(size(obj.lineMatrix));
+
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(obj, state.frame+1));
             p.addController(checkerboardController); %add the controller
@@ -266,21 +271,30 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 %             disp('post board visible')
 % 
             function i = getNewCheckerboard(obj, frame)
+                canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
+                initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(canvasSize(2),canvasSize(1))));
                 % Get fixation index
                 pre_frames = round(60 * (obj.preTime/1e3));
+                stim_frames = round(60 * (obj.stimTime/1e3));
                 tail_frames = round(60 * (obj.tailTime/1e3));
-                n_frames = size(obj.lineMatrix, 2) - pre_frames - tail_frames;
-                n_frames_per_fix = n_frames / obj.num_fixations;
-%                 disp(n_frames)
-%                 disp(n_frames_per_fix);
-                fixation_index = ceil((frame-pre_frames)*(n_frames_per_fix/n_frames));
-%                 fixation_index = int32(fixation_index);
-                disp(['frame: ', num2str(frame), ' fixation_index: ', num2str(fixation_index)]);
+                % CHECK ME
+                if (frame >= pre_frames) && (frame <= pre_frames + stim_frames)
                 
-                line = obj.lineMatrix(:, frame);
-                i = uint8(255 * repmat(line', obj.numChecksY, 1));
-
-                % doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
+                    n_frames = size(obj.lineMatrix, 2) - pre_frames - tail_frames;
+                    n_frames_per_fix = n_frames / obj.num_fixations;
+    %                 disp(n_frames)
+    %                 disp(n_frames_per_fix);
+                    fixation_index = ceil((frame-pre_frames)*(n_frames_per_fix/n_frames));
+    %                 fixation_index = int32(fixation_index);
+                    disp(['frame: ', num2str(frame), ' fixation_index: ', num2str(fixation_index)]);
+                    
+                    line = obj.lineMatrix(:, frame);
+                    i = uint8(255 * repmat(line', canvasSize(2), 1));
+                    doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
+                    i = i + uint8(doves_frame);
+                else
+                    i = initMatrix;
+                end
 
                 
             end
