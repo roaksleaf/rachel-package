@@ -92,9 +92,10 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % If > numMaxFixations, keep evenly spaced fixations = numMaxFixations
             if num_fix > obj.numMaxFixations
                 % Get the indices of the fixations.
-                fix_indices = round(linspace(1, num_fix, obj.numMaxFixations));
-                u_xTraj = u_xTraj(fix_indices);
-                u_yTraj = u_yTraj(fix_indices);
+                n_traj = size(obj.xTraj, 1);
+                fix_indices = round(linspace(1, n_traj, obj.numMaxFixations));
+                u_xTraj = obj.xTraj(fix_indices);
+                u_yTraj = obj.yTraj(fix_indices);
                 num_fix = length(u_xTraj);
             end
 
@@ -282,10 +283,9 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 tail_frames = round(60 * (obj.tailTime/1e3));
                 % CHECK ME
                 if (frame >= pre_frames) && (frame <= pre_frames + stim_frames)
-                
-                    n_frames = size(obj.lineMatrix, 2) - pre_frames - tail_frames;
-                    n_frames_per_fix = n_frames / obj.num_fixations;
-                    fixation_index = ceil((frame-pre_frames)*(n_frames_per_fix/n_frames));
+                    n_frames_per_fix = stim_frames / obj.num_fixations;
+                    disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
+                    fixation_index = ceil((frame-pre_frames)*(n_frames_per_fix/stim_frames));
                     fixation_index = int32(fixation_index);
                     disp(['frame: ', num2str(frame), ' fixation_index: ', num2str(fixation_index)]);
                     
