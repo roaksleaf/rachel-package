@@ -39,6 +39,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         timeTraj
         magnificationFactor
         imageName
+        subjectName
     end
     
     methods
