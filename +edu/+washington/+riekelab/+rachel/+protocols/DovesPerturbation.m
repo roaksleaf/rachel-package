@@ -233,8 +233,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             obj.computeDovesMovieMatrix();
             disp('Generate dovesMovieMatrix');
 
-            % Set the random seed for the position stream.
-            obj.positionStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+            
 
             % generate lineMatrix
             % disp('pre lineMatcall')
@@ -242,15 +241,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars);
             disp('Generated lineMatrix of size:')
             disp(size(obj.lineMatrix));
-            n_frames = size(obj.lineMatrix, 2);
-            % Generate shifts of length frames
-            x_shifts = obj.stixelShiftPix * round((obj.stepsPerStixel-1) * (obj.positionStream.rand(1, n_frames)));
-            % Apply x_shifts to lineMatrix
-            for frame = 1:n_frames
-                obj.lineMatrix(:, frame) = circshift(obj.lineMatrix(:, frame), x_shifts(frame));
-            end
-
-
             % Upscale lineMatrix from (numChecksX, frames) to (canvasSize(1), frames)
             obj.lineMatrix = imresize(obj.lineMatrix, [obj.canvasSize(1), size(obj.lineMatrix, 2)], 'nearest');
             disp('post upscale. Line matrix size:')
@@ -258,6 +248,16 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % Rescale lineMatrix from (0,1) to (-noiseStdv,noiseStdv)*backgroundIntensity
             obj.lineMatrix = obj.lineMatrix * (2*obj.noiseStdv) - obj.noiseStdv;
             obj.lineMatrix = obj.lineMatrix * obj.backgroundIntensity;
+
+            % Set position stream and apply shifts
+            obj.positionStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+            n_frames = size(obj.lineMatrix, 2);
+            % Generate shifts of length frames
+            x_shifts = obj.stixelShiftPix * round((obj.stepsPerStixel-1) * (obj.positionStream.rand(1, n_frames)));
+            % Apply x_shifts to lineMatrix
+            for frame = 1:n_frames
+                obj.lineMatrix(:, frame) = circshift(obj.lineMatrix(:, frame), x_shifts(frame));
+            end
             
             
 
