@@ -241,7 +241,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             disp(size(obj.lineMatrix));
             n_frames = size(obj.lineMatrix, 2);
             % Generate shifts of length frames
-            x_shifts = obj.stixelShiftPix * round((obj.stepsPerStixel-1) * obj.positionStream.rand(1, n_frames));
+            x_shifts = obj.stixelShiftPix * round((obj.stepsPerStixel-1) * (obj.positionStream.rand(1, n_frames)));
             % Apply x_shifts to lineMatrix
             for frame = 1:n_frames
                 obj.lineMatrix(:, frame) = circshift(obj.lineMatrix(:, frame), x_shifts(frame));
