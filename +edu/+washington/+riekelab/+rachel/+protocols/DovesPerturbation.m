@@ -304,11 +304,9 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                         doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
                         i = i + squeeze(doves_frame);
                     end
-                    disp('Min i: ');
-                    disp(min(i, [], 'all'));
-                    disp('Max i: ');
-                    disp(max(i, [], 'all'));
                     i = uint8(255 * i);
+                    disp(['Min i: ', num2str(min(i(:)))]);
+                    disp(['Max i: ', num2str(max(i(:)))]);
                     
 
                     
