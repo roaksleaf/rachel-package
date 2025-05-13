@@ -24,6 +24,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         projectionTypeType = symphonyui.core.PropertyType('char', 'row', {'none', 'linear filter'})
+        canvasSize
         noiseSeed
         positionStream
         gridSizePix
@@ -67,7 +68,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             prepareRun@manookinlab.protocols.ManookinLabStageProtocol(obj);
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
 
-            canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
+            obj.canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
 
             % Convert from microns to pixels...
             obj.stixelSizePix = obj.rig.getDevice('Stage').um2pix(obj.stixelSize);
