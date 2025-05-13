@@ -2,7 +2,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
         preTime = 500 % ms
-        stimTime = 20000 % ms
+        stimTime = 6000 % ms
         tailTime = 500 % ms
         stixelSize = 60 % um
         stimulusIndices = [2, 10]         % Stimulus number (1:161)
@@ -285,14 +285,14 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 tail_frames = round(60 * (obj.tailTime/1e3));
                 % CHECK ME
                 if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
-                    disp(['frame: ', num2str(frame-pre_frames+1)]);
+%                     disp(['frame: ', num2str(frame-pre_frames+1)]);
                     n_frames_per_fix = ceil(stim_frames / obj.num_fixations);
                     % disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
                     all_fix_indices = 1:obj.num_fixations;
                     all_fix_indices = repelem(all_fix_indices, n_frames_per_fix);
                     fixation_index = all_fix_indices(1,frame - pre_frames+1);
-                    disp(['Fixation index size: ', num2str(size(all_fix_indices,2))]);
-                    disp(['Fixation_index: ', num2str(fixation_index)]);
+%                     disp(['Fixation index size: ', num2str(size(all_fix_indices,2))]);
+%                     disp(['Fixation_index: ', num2str(fixation_index)]);
                     
                     line = obj.lineMatrix(:, frame);
                     % i = uint8(255 * repmat(line', canvasSize(2), 1));
@@ -305,8 +305,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                         i = i + squeeze(doves_frame);
                     end
                     i = uint8(255 * i);
-                    disp(['Min i: ', num2str(min(i(:)))]);
-                    disp(['Max i: ', num2str(max(i(:)))]);
+%                     disp(['Min i: ', num2str(min(i(:)))]);
+%                     disp(['Max i: ', num2str(max(i(:)))]);
                     
 
                     
