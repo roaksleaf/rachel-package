@@ -229,8 +229,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
 
-            
-
             % Create checkerboard
             initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
             board = stage.builtin.stimuli.Image(initMatrix);
@@ -273,11 +271,12 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 n_frames = size(obj.lineMatrix, 2) - pre_frames - tail_frames;
                 n_frames_per_fix = int(n_frames / obj.num_fixations);
                 fixation_index = ceil(frame * n_frames_per_fix/n_frames);
+                disp(['frame: ', num2str(frame), ' fixation_index: ', num2str(fixation_index)]);
                 
                 line = obj.lineMatrix(:, frame);
                 i = uint8(255 * repmat(line', obj.numChecksY, 1));
 
-                doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
+                % doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
 
                 
             end
