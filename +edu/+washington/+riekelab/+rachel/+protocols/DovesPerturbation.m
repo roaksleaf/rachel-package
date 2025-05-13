@@ -1,3 +1,4 @@
+% Plays 1D noise + doves fixation image, for many fixations of the image.
 classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
@@ -7,7 +8,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         stixelSize = 60 % um
         stimulusIndices = [2, 10]         % Stimulus number (1:161)
         numMaxFixations = 10 % Maximum number of fixations
-        binaryNoise = true %binary checkers - overrides noiseStdv
+        binaryNoise = true %binary checkers
         pairedBars = true
         noiseStdv = 0.3 %contrast, as fraction of mean
         frameDwell = 1 % Frames per noise update
@@ -65,7 +66,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             %convert from microns to pixels...
             stixelSizePix = obj.rig.getDevice('Stage').um2pix(obj.stixelSize);
             obj.numChecksX = round(canvasSize(1) / stixelSizePix);
-            obj.numChecksY = round(canvasSize(2) / stixelSizePix);
 
             % Get the resources directory.
             obj.pkgDir = manookinlab.Package.getResourcePath();
