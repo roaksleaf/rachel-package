@@ -110,7 +110,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 % Get the current fixation.
                 xFix = u_xTraj(i);
                 yFix = u_yTraj(i);
-                p = p0 + [dy,dx];
+                p = p0 + [yFix, xFix];
                 x_idx = round(p(2) + x_vals);
                 y_idx = round(p(1) + y_vals);
                 x_good = (x_idx > 0) & (x_idx <= scene_size(2));
