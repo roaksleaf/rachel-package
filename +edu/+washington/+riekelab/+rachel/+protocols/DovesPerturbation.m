@@ -98,13 +98,13 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             end
 
             disp(['Number of fixations: ', num2str(num_fix)]);
-            scene_size = [size(obj.dovesMatrix,2) size(obj.dovesMatrix,1)]*obj.magnificationFactor;
+            scene_size = [size(obj.dovesMatrix,1) size(obj.dovesMatrix,2)]*obj.magnificationFactor;
             % Upscale dovesMatrix to scene size
             obj.dovesMatrix = imresize(obj.dovesMatrix, scene_size, 'bilinear');
             screen_size = obj.rig.getDevice('Stage').getCanvasSize();
             p0 = scene_size/2;
-            x_vals = -screen_size(2)/2+1:screen_size(2)/2;
-            y_vals = -screen_size(1)/2+1:screen_size(1)/2;
+            y_vals = -screen_size(2)/2+1:screen_size(2)/2;
+            x_vals = -screen_size(1)/2+1:screen_size(1)/2;
             dovesMovieMatrix = zeros(num_fix, screen_size(1), screen_size(2));
             for i = 1:num_fix
                 % Get the current fixation.
@@ -118,7 +118,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 % Get the image matrix.
                 dovesMovieMatrix(i, x_good, y_good) = obj.dovesMatrix(y_idx(y_good), x_idx(x_good))';
             end
-            obj.dovesMovieMatrix = dovesMovieMatrix;
+            obj.dovesMovieMatrix = permute(dovesMovieMatrix, [1,3,2]);
             obj.num_fixations = num_fix;
          end
         
@@ -266,8 +266,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 
             function i = getNewCheckerboard(obj, frame)
                 % Get fixation index
-                pre_frames = round(60 * (obj.preTime/1e3))
-                tail_frames = round(60 * (obj.tailTime/1e3))
+                pre_frames = round(60 * (obj.preTime/1e3));
+                tail_frames = round(60 * (obj.tailTime/1e3));
                 n_frames = size(obj.lineMatrix, 2) - pre_frames - tail_frames;
                 n_frames_per_fix = int(n_frames / obj.num_fixations);
                 fixation_index = ceil(frame * n_frames_per_fix/n_frames);
