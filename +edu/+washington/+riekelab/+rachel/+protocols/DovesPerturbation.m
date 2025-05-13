@@ -6,6 +6,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         tailTime = 500 % ms
         stixelSize = 60 % um
         stimulusIndices = [2]         % Stimulus number (1:161)
+        numMaxFixations = 10 % Maximum number of fixations
         binaryNoise = true %binary checkers - overrides noiseStdv
         pairedBars = true
         noiseStdv = 0.3 %contrast, as fraction of mean
@@ -87,15 +88,24 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             u_xTraj = unique(obj.xTraj);
             u_yTraj = unique(obj.yTraj);
             num_fix = length(u_xTraj);
+            % If > numMaxFixations, keep evenly spaced fixations = numMaxFixations
+            if num_fix > obj.numMaxFixations
+                % Get the indices of the fixations.
+                fix_indices = round(linspace(1, num_fix, obj.numMaxFixations));
+                u_xTraj = u_xTraj(fix_indices);
+                u_yTraj = u_yTraj(fix_indices);
+                num_fix = length(u_xTraj);
+            end
+
             disp(['Number of fixations: ', num2str(num_fix)]);
             scene_size = [size(obj.dovesMatrix,2) size(obj.dovesMatrix,1)]*obj.magnificationFactor;
             % Upscale dovesMatrix to scene size
             obj.dovesMatrix = imresize(obj.dovesMatrix, scene_size, 'bilinear');
-            screen_size = obj.canvasSize;
+            screen_size = obj.rig.getDevice('Stage').getCanvasSize();
             p0 = scene_size/2;
             x_vals = -screen_size(2)/2+1:screen_size(2)/2;
             y_vals = -screen_size(1)/2+1:screen_size(1)/2;
-            dovesMovieMatrix = zeros(num_fix, canvasSize(1), canvasSize(2));
+            dovesMovieMatrix = zeros(num_fix, screen_size(1), screen_size(2));
             for i = 1:num_fix
                 % Get the current fixation.
                 xFix = u_xTraj(i);
@@ -268,7 +278,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 i = uint8(255 * repmat(line', obj.numChecksY, 1));
 
                 doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
-                
+
                 
             end
             
