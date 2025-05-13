@@ -297,7 +297,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                     end
                     if fixation_index >= 1
                         doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
-                        i = i + doves_frame;
+                        i = i + squeeze(doves_frame);
                     end
                     i = uint8(255 * i);
                     
