@@ -5,7 +5,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         stimTime = 20000 % ms
         tailTime = 500 % ms
         stixelSize = 60 % um
-        stimulusIndices = [2]         % Stimulus number (1:161)
+        stimulusIndices = [2, 10]         % Stimulus number (1:161)
         numMaxFixations = 10 % Maximum number of fixations
         binaryNoise = true %binary checkers - overrides noiseStdv
         pairedBars = true
@@ -13,7 +13,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         frameDwell = 1 % Frames per noise update
         apertureDiameter = 0 % um
         manualMagnification = 0         % Override DOVES magnification by setting this >1
-        backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(60) % number of epochs to queue
         amp % Output amplifier
@@ -48,6 +47,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         magnificationFactor
         imageName
         subjectName
+        backgroundIntensity
     end
     
     methods
@@ -72,8 +72,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             
             obj.currentStimSet = 'dovesFEMstims20160826.mat';
 
-            % Calculate imgContrastReduction
-            obj.imgContrastReduction = obj.backgroundIntensity * obj.noiseStdv;
+            
 
             % Load the current stimulus set.
             obj.im = load([obj.pkgDir,'\',obj.currentStimSet]);
@@ -92,7 +91,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % If > numMaxFixations, keep evenly spaced fixations = numMaxFixations
             if num_fix > obj.numMaxFixations
                 % Get the indices of the fixations.
-                n_traj = size(obj.xTraj, 1);
+                n_traj = size(obj.xTraj, 2);
                 fix_indices = round(linspace(1, n_traj, obj.numMaxFixations));
                 u_xTraj = obj.xTraj(fix_indices);
                 u_yTraj = obj.yTraj(fix_indices);
@@ -107,7 +106,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             p0 = scene_size/2;
             y_vals = -screen_size(2)/2+1:screen_size(2)/2;
             x_vals = -screen_size(1)/2+1:screen_size(1)/2;
-            dovesMovieMatrix = zeros(num_fix, screen_size(1), screen_size(2));
+            dovesMovieMatrix = zeros(num_fix+1, screen_size(1), screen_size(2));
+            dovesMovieMatrix(1,:,:) = obj.backgroundIntensity * ones(screen_size);
             for i = 1:num_fix
                 % Get the current fixation.
                 xFix = u_xTraj(i);
@@ -118,10 +118,10 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 x_good = (x_idx > 0) & (x_idx <= scene_size(2));
                 y_good = (y_idx > 0) & (y_idx <= scene_size(1));
                 % Get the image matrix.
-                dovesMovieMatrix(i, x_good, y_good) = obj.dovesMatrix(y_idx(y_good), x_idx(x_good))';
+                dovesMovieMatrix(i+1, x_good, y_good) = obj.dovesMatrix(y_idx(y_good), x_idx(x_good))';
             end
             obj.dovesMovieMatrix = permute(dovesMovieMatrix, [1,3,2]);
-            obj.num_fixations = num_fix;
+            obj.num_fixations = num_fix+1;
          end
         
          function getImageSubject(obj)
@@ -139,6 +139,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             disp(['min img: ', num2str(min(obj.img(:)))]);
             disp(['max img: ', num2str(max(obj.img(:)))]);
             obj.backgroundIntensity = mean(img(:));%set the mean to the mean over the image
+            % Calculate imgContrastReduction
+            obj.imgContrastReduction = obj.backgroundIntensity * obj.noiseStdv;
             
             % Scale from (0,1) to (0-obj.imageContrastReduction, 1+obj.imageContrastReduction)
             obj.img = img * (1-2*obj.imgContrastReduction) + obj.imgContrastReduction;
@@ -282,13 +284,15 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 stim_frames = round(60 * (obj.stimTime/1e3));
                 tail_frames = round(60 * (obj.tailTime/1e3));
                 % CHECK ME
-                if (frame >= pre_frames) && (frame <= pre_frames + stim_frames)
-                    n_frames_per_fix = floor(stim_frames / obj.num_fixations);
+                if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
+                    disp(['frame: ', num2str(frame-pre_frames+1)]);
+                    n_frames_per_fix = ceil(stim_frames / obj.num_fixations);
                     % disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
                     all_fix_indices = 1:obj.num_fixations;
                     all_fix_indices = repelem(all_fix_indices, n_frames_per_fix);
-                    fixation_index = all_fix_indices(frame - pre_frames);
-                    disp(['frame: ', num2str(frame), ' fixation_index: ', num2str(fixation_index)]);
+                    fixation_index = all_fix_indices(1,frame - pre_frames+1);
+                    disp(['Fixation index size: ', num2str(size(all_fix_indices,2))]);
+                    disp(['Fixation_index: ', num2str(fixation_index)]);
                     
                     line = obj.lineMatrix(:, frame);
                     % i = uint8(255 * repmat(line', canvasSize(2), 1));
@@ -300,12 +304,18 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                         doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
                         i = i + squeeze(doves_frame);
                     end
+                    disp('Min i: ');
+                    disp(min(i, [], 'all'));
+                    disp('Max i: ');
+                    disp(max(i, [], 'all'));
                     i = uint8(255 * i);
+                    
+
                     
                 else
                     i = initMatrix;
                 end
-
+               
                 
             end
             
