@@ -27,10 +27,13 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         numChecksX
         numChecksY
         imageMatrix
+        dovesMatrix
         lineMatrix
         dimBackground
         useFixedSeed = true     % Toggle between fixed and random seeds
-        im
+        imgContrastReduction
+        im % All image data
+        img % Current image (0-pad,1+pad)
         pkgDir
         currentStimSet
         stimulusIndex
@@ -64,7 +67,10 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             obj.pkgDir = manookinlab.Package.getResourcePath();
             
             obj.currentStimSet = 'dovesFEMstims20160826.mat';
-            
+
+            % Calculate imgContrastReduction
+            obj.imgContrastReduction = obj.backgroundIntensity * obj.noiseStdv;
+
             % Load the current stimulus set.
             obj.im = load([obj.pkgDir,'\',obj.currentStimSet]);
             % Get the image and subject names.
@@ -85,10 +91,20 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             
             img = double(img');
             img = (img./max(img(:))); %rescale s.t. brightest point is maximum monitor level
+            % Display min and max of img
+            disp(['min img: ', num2str(min(obj.img(:)))]);
+            disp(['max img: ', num2str(max(obj.img(:)))]);
             obj.backgroundIntensity = mean(img(:));%set the mean to the mean over the image
-            img = img.*255; %rescale s.t. brightest point is maximum monitor level
-            obj.imageMatrix = uint8(img);
             
+            % Scale from (0,1) to (0-obj.imageContrastReduction, 1+obj.imageContrastReduction)
+            obj.img = img * (1-2*obj.imgContrastReduction) + obj.imgContrastReduction;
+            % Display min and max of img
+            disp('Image contrast reduction');
+            disp(['min img: ', num2str(min(obj.img(:)))]);
+            disp(['max img: ', num2str(max(obj.img(:)))]);
+            obj.img = obj.img.*255; %rescale s.t. brightest point is maximum monitor level
+            obj.dovesMatrix = uint8(obj.img);
+
             %get appropriate eye trajectories, at 200Hz
             if (obj.freezeFEMs) %freeze FEMs, hang on fixations
                 obj.xTraj = obj.im.FEMdata(obj.stimulusIndex).frozenX;
@@ -161,6 +177,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
 
+            
+
             % Create checkerboard
             initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
             board = stage.builtin.stimuli.Image(initMatrix);
@@ -170,9 +188,34 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
 
+            %apply eye trajectories to move image around
+             % Create your scene.
+            scene = stage.builtin.stimuli.Image(obj.dovesMatrix);
+            scene.size = [size(obj.dovesMatrix,2) size(obj.dovesMatrix,1)]*obj.magnificationFactor;
+            p0 = obj.canvasSize/2;
+            scene.position = p0;
+            scenePosition = stage.builtin.controllers.PropertyController(board,...
+                'position', @(state)getScenePosition(obj, state.time - (obj.preTime+obj.waitTime)/1e3, p0));
+            % Add the controller.
+            p.addController(scenePosition);
+            
+            function p = getScenePosition(obj, time, p0)
+                if time < 0
+                    p = p0;
+                elseif time > obj.timeTraj(end) %out of eye trajectory, hang on last frame
+                    p(1) = p0(1) + obj.xTraj(end);
+                    p(2) = p0(2) + obj.yTraj(end);
+                else %within eye trajectory and stim time
+                    dx = interp1(obj.timeTraj,obj.xTraj,time);
+                    dy = interp1(obj.timeTraj,obj.yTraj,time);
+                    p(1) = p0(1) + dx;
+                    p(2) = p0(2) + dy;
+                end
+            end
+
             disp('pre lineMatcall')
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, 0, 1, obj.pairedBars);
+                obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars);
             disp('post line mat call')
             
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
