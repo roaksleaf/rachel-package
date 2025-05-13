@@ -27,6 +27,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         noiseStream
         numChecksX
         numChecksY
+        initMatrix
         imageMatrix
         dovesMatrix
         dovesMovieMatrix
@@ -231,8 +232,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 
             % Create checkerboard
             % initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
-            initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(canvasSize(2),canvasSize(1))));
-            board = stage.builtin.stimuli.Image(initMatrix);
+            obj.initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(canvasSize(2),canvasSize(1))));
+            board = stage.builtin.stimuli.Image(obj.initMatrix);
             board.size = canvasSize;
             board.position = canvasSize/2;
             board.setMinFunction(GL.NEAREST); %don't interpolate to scale up board
@@ -271,8 +272,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 %             disp('post board visible')
 % 
             function i = getNewCheckerboard(obj, frame)
-                canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
-                initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(canvasSize(2),canvasSize(1))));
+                initMatrix = obj.initMatrix;
                 % Get fixation index
                 pre_frames = round(60 * (obj.preTime/1e3));
                 stim_frames = round(60 * (obj.stimTime/1e3));
