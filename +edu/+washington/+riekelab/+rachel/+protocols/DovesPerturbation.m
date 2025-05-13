@@ -6,6 +6,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         stimTime = 6000 % ms
         tailTime = 500 % ms
         stixelSize = 60 % um
+        gridSize = 30 % um
         stimulusIndices = [2, 10]         % Stimulus number (1:161)
         numMaxFixations = 10 % Maximum number of fixations
         binaryNoise = true %binary checkers
@@ -24,7 +25,11 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         projectionTypeType = symphonyui.core.PropertyType('char', 'row', {'none', 'linear filter'})
         noiseSeed
-        noiseStream
+        positionStream
+        gridSizePix
+        stixelSizePix
+        stixelShiftPix
+        stepsPerStixel
         numChecksX
         initMatrix
         imageMatrix
@@ -61,18 +66,20 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         function prepareRun(obj)
             prepareRun@manookinlab.protocols.ManookinLabStageProtocol(obj);
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            %get number of checkers...
+
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
-            %convert from microns to pixels...
-            stixelSizePix = obj.rig.getDevice('Stage').um2pix(obj.stixelSize);
-            obj.numChecksX = round(canvasSize(1) / stixelSizePix);
+
+            % Convert from microns to pixels...
+            obj.stixelSizePix = obj.rig.getDevice('Stage').um2pix(obj.stixelSize);
+            obj.numChecksX = round(canvasSize(1) / obj.stixelSizePix);
+            obj.gridSizePix = obj.rig.getDevice('Stage').um2pix(obj.gridSize);
+            obj.stepsPerStixel = max(round(obj.stixelSizePix / obj.gridSizePix), 1);
+            obj.stixelShiftPix = round(obj.stixelSizePix / obj.stepsPerStixel);
 
             % Get the resources directory.
             obj.pkgDir = manookinlab.Package.getResourcePath();
             
             obj.currentStimSet = 'dovesFEMstims20160826.mat';
-
-            
 
             % Load the current stimulus set.
             obj.im = load([obj.pkgDir,'\',obj.currentStimSet]);
@@ -183,6 +190,10 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             %canvasPix = (VHpix) * (um/VHpix)/(um/canvasPix)
             obj.xTraj = obj.xTraj .* 3.3/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
             obj.yTraj = obj.yTraj .* 3.3/obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel');
+
+            % Round to nearest integer
+            obj.xTraj = round(obj.xTraj);
+            obj.yTraj = round(obj.yTraj);
             
             % Load the fixations for the image.
             f = load([obj.pkgDir,'\doves\fixations\', obj.imageName, '.mat']);
@@ -207,7 +218,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             else
                 obj.noiseSeed = randi(2^32 - 1);
             end
-%             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
             
             % Toggle the seed usage for the next epoch
             obj.useFixedSeed = ~obj.useFixedSeed;
@@ -221,9 +231,41 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             
             % Generate dovesMovieMatrix
             obj.computeDovesMovieMatrix();
+            disp('Generate dovesMovieMatrix');
+
+            % generate lineMatrix
+            % disp('pre lineMatcall')
+            obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
+                obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars);
+            disp('Generated lineMatrix of size:')
+            disp(size(obj.lineMatrix));
+            n_frames = size(obj.lineMatrix, 2);
+            % Generate shifts of length frames
+            x_shifts = obj.stixelShiftPix * round((obj.stepsPerStixel-1) * obj.positionStream.rand(1, n_frames));
+            % Apply x_shifts to lineMatrix
+            for frame = 1:n_frames
+                obj.lineMatrix(:, frame) = circshift(obj.lineMatrix(:, frame), x_shifts(frame));
+            end
+
+
+            % Upscale lineMatrix from (numChecksX, frames) to (canvasSize(1), frames)
+            obj.lineMatrix = imresize(obj.lineMatrix, [canvasSize(1), size(obj.lineMatrix, 2)], 'nearest');
+            disp('post upscale. Line matrix size:')
+            disp(size(obj.lineMatrix));
+            % Rescale lineMatrix from (0,1) to (-noiseStdv,noiseStdv)*backgroundIntensity
+            obj.lineMatrix = obj.lineMatrix * (2*obj.noiseStdv) - obj.noiseStdv;
+            obj.lineMatrix = obj.lineMatrix * obj.backgroundIntensity;
+            % Set the random seed for the position stream.
+            obj.positionStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+            
+
+
             
             % Add epoch parameters.
             epoch.addParameter('noiseSeed', obj.noiseSeed);
+            epoch.addParameter('useFixedSeed', obj.useFixedSeed);
+            epoch.addParameter('stixelSize', obj.stixelSize);
+            epoch.addParameter('gridSize', obj.gridSize);
             epoch.addParameter('numChecksX', obj.numChecksX);
             epoch.addParameter('stimulusIndex', obj.stimulusIndex);
             epoch.addParameter('imageName', obj.imageName);
@@ -254,19 +296,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
 
-            % disp('pre lineMatcall')
-            obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars);
-            disp('post line mat call. Line matrix size:')
-            disp(size(obj.lineMatrix));
-            % Upscale lineMatrix from (numChecksX, frames) to (canvasSize(1), frames)
-            obj.lineMatrix = imresize(obj.lineMatrix, [canvasSize(1), size(obj.lineMatrix, 2)], 'nearest');
-            disp('post upscale. Line matrix size:')
-            disp(size(obj.lineMatrix));
-            % Rescale lineMatrix from (0,1) to (-noiseStdv,noiseStdv)*backgroundIntensity
-            obj.lineMatrix = obj.lineMatrix * (2*obj.noiseStdv) - obj.noiseStdv;
-            obj.lineMatrix = obj.lineMatrix * obj.backgroundIntensity;
-
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(obj, state.frame+1));
             p.addController(checkerboardController); %add the controller
@@ -282,9 +311,9 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             end
             
             % hide during pre & post
-            boardVisible = stage.builtin.controllers.PropertyController(board, 'visible', ...
-                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(boardVisible); 
+            % boardVisible = stage.builtin.controllers.PropertyController(board, 'visible', ...
+            %     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+            % p.addController(boardVisible); 
           
             disp('post board visible')
 
