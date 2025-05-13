@@ -145,8 +145,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             disp('Image contrast reduction');
             disp(['min img: ', num2str(min(obj.img(:)))]);
             disp(['max img: ', num2str(max(obj.img(:)))]);
-            obj.img = obj.img.*255; %rescale s.t. brightest point is maximum monitor level
-            obj.dovesMatrix = uint8(obj.img);
+            % obj.img = obj.img.*255; %rescale s.t. brightest point is maximum monitor level
+            obj.dovesMatrix = obj.img;
 
             %get appropriate eye trajectories, at 200Hz
             if (obj.freezeFEMs) %freeze FEMs, hang on fixations
@@ -249,6 +249,9 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             obj.lineMatrix = imresize(obj.lineMatrix, [canvasSize(1), size(obj.lineMatrix, 2)], 'nearest');
             disp('post upscale. Line matrix size:')
             disp(size(obj.lineMatrix));
+            % Rescale lineMatrix from (0,1) to (-noiseStdv,noiseStdv)*backgroundIntensity
+            obj.lineMatrix = obj.lineMatrix * (2*obj.noiseStdv) - obj.noiseStdv;
+            obj.lineMatrix = obj.lineMatrix * obj.backgroundIntensity;
 
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(obj, state.frame+1));
@@ -287,14 +290,16 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                     disp(['frame: ', num2str(frame), ' fixation_index: ', num2str(fixation_index)]);
                     
                     line = obj.lineMatrix(:, frame);
-                    i = uint8(255 * repmat(line', canvasSize(2), 1));
+                    % i = uint8(255 * repmat(line', canvasSize(2), 1));
+                    i = repmat(line', canvasSize(2), 1);
                     if fixation_index > obj.num_fixations
                         fixation_index = obj.num_fixations;
                     end
                     if fixation_index >= 1
                         doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
-                        i = i + uint8(doves_frame);
+                        i = i + doves_frame;
                     end
+                    i = uint8(255 * i);
                     
                 else
                     i = initMatrix;
