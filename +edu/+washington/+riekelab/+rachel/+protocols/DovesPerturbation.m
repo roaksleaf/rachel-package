@@ -11,6 +11,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         noiseStdv = 0.3 %contrast, as fraction of mean
         frameDwell = 1 % Frames per noise update
         apertureDiameter = 0 % um
+        manualMagnification = 0         % Override DOVES magnification by setting this >1
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(60) % number of epochs to queue
