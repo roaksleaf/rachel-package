@@ -283,10 +283,11 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 tail_frames = round(60 * (obj.tailTime/1e3));
                 % CHECK ME
                 if (frame >= pre_frames) && (frame <= pre_frames + stim_frames)
-                    n_frames_per_fix = stim_frames / obj.num_fixations;
-                    disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
-                    fixation_index = ceil((frame-pre_frames)*(n_frames_per_fix/stim_frames));
-                    fixation_index = int32(fixation_index);
+                    n_frames_per_fix = floor(stim_frames / obj.num_fixations);
+                    % disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
+                    all_fix_indices = 1:obj.num_fixations;
+                    all_fix_indices = repelem(all_fix_indices, n_frames_per_fix);
+                    fixation_index = all_fix_indices(frame - pre_frames);
                     disp(['frame: ', num2str(frame), ' fixation_index: ', num2str(fixation_index)]);
                     
                     line = obj.lineMatrix(:, frame);
