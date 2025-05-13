@@ -25,12 +25,12 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         noiseSeed
         noiseStream
         numChecksX
-        numChecksY
         initMatrix
         imageMatrix
         dovesMatrix
         dovesMovieMatrix
         num_fixations
+        all_fix_indices
         lineMatrix
         dimBackground
         useFixedSeed = true     % Toggle between fixed and random seeds
@@ -107,10 +107,11 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             y_vals = -screen_size(2)/2+1:screen_size(2)/2;
             x_vals = -screen_size(1)/2+1:screen_size(1)/2;
             dovesMovieMatrix = zeros(num_fix+1, screen_size(1), screen_size(2));
+            % First frame is background intensity.
             dovesMovieMatrix(1,:,:) = obj.backgroundIntensity * ones(screen_size);
             for i = 1:num_fix
                 % Get the current fixation.
-                xFix = u_xTraj(i);
+                xFix = -u_xTraj(i);
                 yFix = u_yTraj(i);
                 p = p0 + [yFix, xFix];
                 x_idx = round(p(2) + x_vals);
@@ -122,6 +123,14 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             end
             obj.dovesMovieMatrix = permute(dovesMovieMatrix, [1,3,2]);
             obj.num_fixations = num_fix+1;
+            % Compute all_fix_indices
+            pre_frames = round(60 * (obj.preTime/1e3));
+            stim_frames = round(60 * (obj.stimTime/1e3));
+            all_fix_indices = 1:obj.num_fixations;
+            n_frames_per_fix = ceil(stim_frames / obj.num_fixations);
+            all_fix_indices = repelem(all_fix_indices, n_frames_per_fix);
+            all_fix_indices = squeeze(all_fix_indices);
+            obj.all_fix_indices = all_fix_indices;
          end
         
          function getImageSubject(obj)
@@ -148,7 +157,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             disp('Image contrast reduction');
             disp(['min img: ', num2str(min(obj.img(:)))]);
             disp(['max img: ', num2str(max(obj.img(:)))]);
-            % obj.img = obj.img.*255; %rescale s.t. brightest point is maximum monitor level
             obj.dovesMatrix = obj.img;
 
             %get appropriate eye trajectories, at 200Hz
@@ -214,13 +222,17 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % Generate dovesMovieMatrix
             obj.computeDovesMovieMatrix();
             
-            
-            %at start of epoch, set random stream
-%             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+            % Add epoch parameters.
             epoch.addParameter('noiseSeed', obj.noiseSeed);
             epoch.addParameter('numChecksX', obj.numChecksX);
-            epoch.addParameter('numChecksY', obj.numChecksY);
-            fprintf(1, 'end prepare epoc\n');
+            epoch.addParameter('stimulusIndex', obj.stimulusIndex);
+            epoch.addParameter('imageName', obj.imageName);
+            epoch.addParameter('subjectName', obj.subjectName);
+            epoch.addParameter('imgContrastReduction', obj.imgContrastReduction);
+            epoch.addParameter('noiseStdv', obj.noiseStdv);
+            epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
+            epoch.addParameter('num_fixations', obj.num_fixations);
+            fprintf(1, 'end prepare epoch\n');
          end
 
          function p = createPresentation(obj)
@@ -234,7 +246,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
 
             % Create checkerboard
-            % initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
             obj.initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(canvasSize(2),canvasSize(1))));
             board = stage.builtin.stimuli.Image(obj.initMatrix);
             board.size = canvasSize;
@@ -259,43 +270,37 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(obj, state.frame+1));
             p.addController(checkerboardController); %add the controller
-%             
-%             if (obj.apertureDiameter > 0) %% Create aperture
-%                 aperture = stage.builtin.stimuli.Rectangle();
-%                 aperture.position = canvasSize/2;
-%                 aperture.color = obj.backgroundIntensity;
-%                 aperture.size = [max(canvasSize) max(canvasSize)];
-%                 mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
-%                 aperture.setMask(mask);
-%                 p.addStimulus(aperture); %add aperture
-%             end
+            
+            if (obj.apertureDiameter > 0) %% Create aperture
+                aperture = stage.builtin.stimuli.Rectangle();
+                aperture.position = canvasSize/2;
+                aperture.color = obj.backgroundIntensity;
+                aperture.size = [max(canvasSize) max(canvasSize)];
+                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
+                aperture.setMask(mask);
+                p.addStimulus(aperture); %add aperture
+            end
             
             % hide during pre & post
-%             boardVisible = stage.builtin.controllers.PropertyController(board, 'visible', ...
-%                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-%             p.addController(boardVisible); 
-%           
-%             disp('post board visible')
-% 
+            boardVisible = stage.builtin.controllers.PropertyController(board, 'visible', ...
+                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+            p.addController(boardVisible); 
+          
+            disp('post board visible')
+
             function i = getNewCheckerboard(obj, frame)
-                initMatrix = obj.initMatrix;
                 % Get fixation index
                 pre_frames = round(60 * (obj.preTime/1e3));
                 stim_frames = round(60 * (obj.stimTime/1e3));
-                tail_frames = round(60 * (obj.tailTime/1e3));
                 % CHECK ME
                 if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
 %                     disp(['frame: ', num2str(frame-pre_frames+1)]);
-                    n_frames_per_fix = ceil(stim_frames / obj.num_fixations);
                     % disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
-                    all_fix_indices = 1:obj.num_fixations;
-                    all_fix_indices = repelem(all_fix_indices, n_frames_per_fix);
-                    fixation_index = all_fix_indices(1,frame - pre_frames+1);
+                    fixation_index = obj.all_fix_indices(frame - pre_frames+1);
 %                     disp(['Fixation index size: ', num2str(size(all_fix_indices,2))]);
 %                     disp(['Fixation_index: ', num2str(fixation_index)]);
                     
                     line = obj.lineMatrix(:, frame);
-                    % i = uint8(255 * repmat(line', canvasSize(2), 1));
                     i = repmat(line', canvasSize(2), 1);
                     if fixation_index > obj.num_fixations
                         fixation_index = obj.num_fixations;
@@ -307,11 +312,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                     i = uint8(255 * i);
 %                     disp(['Min i: ', num2str(min(i(:)))]);
 %                     disp(['Max i: ', num2str(max(i(:)))]);
-                    
-
-                    
                 else
-                    i = initMatrix;
+                    i = obj.initMatrix;
                 end
                
                 
