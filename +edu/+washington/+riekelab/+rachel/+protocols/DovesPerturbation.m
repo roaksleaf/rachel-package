@@ -24,7 +24,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         projectionTypeType = symphonyui.core.PropertyType('char', 'row', {'none', 'linear filter'})
-        canvasSize
         noiseSeed
         positionStream
         gridSizePix
@@ -72,7 +71,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 
             % Convert from microns to pixels...
             obj.stixelSizePix = obj.rig.getDevice('Stage').um2pix(obj.stixelSize);
-            obj.numChecksX = round(canvasSize(1) / obj.stixelSizePix);
+            obj.numChecksX = round(obj.canvasSize(1) / obj.stixelSizePix);
             obj.gridSizePix = obj.rig.getDevice('Stage').um2pix(obj.gridSize);
             obj.stepsPerStixel = max(round(obj.stixelSizePix / obj.gridSizePix), 1);
             obj.stixelShiftPix = round(obj.stixelSizePix / obj.stepsPerStixel);
@@ -253,7 +252,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 
 
             % Upscale lineMatrix from (numChecksX, frames) to (canvasSize(1), frames)
-            obj.lineMatrix = imresize(obj.lineMatrix, [canvasSize(1), size(obj.lineMatrix, 2)], 'nearest');
+            obj.lineMatrix = imresize(obj.lineMatrix, [obj.canvasSize(1), size(obj.lineMatrix, 2)], 'nearest');
             disp('post upscale. Line matrix size:')
             disp(size(obj.lineMatrix));
             % Rescale lineMatrix from (0,1) to (-noiseStdv,noiseStdv)*backgroundIntensity
@@ -287,14 +286,12 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 
             %convert from microns to pixels...
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
-            
-            canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
 
             % Create checkerboard
-            obj.initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(canvasSize(2),canvasSize(1))));
+            obj.initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.canvasSize(2),obj.canvasSize(1))));
             board = stage.builtin.stimuli.Image(obj.initMatrix);
-            board.size = canvasSize;
-            board.position = canvasSize/2;
+            board.size = obj.canvasSize;
+            board.position = obj.canvasSize/2;
             board.setMinFunction(GL.NEAREST); %don't interpolate to scale up board
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
@@ -305,10 +302,10 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             
             if (obj.apertureDiameter > 0) %% Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2;
+                aperture.position = obj.canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
-                aperture.size = [max(canvasSize) max(canvasSize)];
-                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
+                aperture.size = [max(obj.canvasSize) max(obj.canvasSize)];
+                mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(obj.canvasSize), 1024); %circular aperture
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
             end
@@ -333,7 +330,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 %                     disp(['Fixation_index: ', num2str(fixation_index)]);
                     
                     line = obj.lineMatrix(:, frame);
-                    i = repmat(line', canvasSize(2), 1);
+                    i = repmat(line', obj.canvasSize(2), 1);
                     if fixation_index > obj.num_fixations
                         fixation_index = obj.num_fixations;
                     end
