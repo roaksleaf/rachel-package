@@ -233,6 +233,9 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             obj.computeDovesMovieMatrix();
             disp('Generate dovesMovieMatrix');
 
+            % Set the random seed for the position stream.
+            obj.positionStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+
             % generate lineMatrix
             % disp('pre lineMatcall')
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
@@ -255,8 +258,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % Rescale lineMatrix from (0,1) to (-noiseStdv,noiseStdv)*backgroundIntensity
             obj.lineMatrix = obj.lineMatrix * (2*obj.noiseStdv) - obj.noiseStdv;
             obj.lineMatrix = obj.lineMatrix * obj.backgroundIntensity;
-            % Set the random seed for the position stream.
-            obj.positionStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+            
             
 
 
