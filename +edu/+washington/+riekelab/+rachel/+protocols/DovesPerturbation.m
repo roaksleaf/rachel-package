@@ -309,8 +309,9 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             stim_frames = round(60 * (obj.stimTime/1e3));
             % state.frame is 0-indexed, so add 1 to get the first frame
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
-                @(state)getNewCheckerboard(obj, state.frame+1, obj.lineMatrix(:, state.frame+1), ...
-                                            obj.dovesMovieMatrix(obj.all_fix_indices(state.frame+1), :, :), pre_frames, stim_frames));
+                @(state)getNewCheckerboard(state.frame+1, obj.lineMatrix(:, state.frame+1), ...
+                                            obj.dovesMovieMatrix(obj.all_fix_indices(state.frame+1), :, :), ...
+                                            pre_frames, stim_frames, obj.canvasSize(2)));
             p.addController(checkerboardController); %add the controller
             
             if (obj.apertureDiameter > 0) %% Create aperture
@@ -330,7 +331,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
           
             disp('post board visible')
 
-            function i = getNewCheckerboard(obj, frame, line, doves_frame, pre_frames, stim_frames)
+            function i = getNewCheckerboard(frame, line, doves_frame, pre_frames, stim_frames, canvas_size_y)
                 % CHECK ME
                 if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
 %                     disp(['frame: ', num2str(frame-pre_frames+1)]);
@@ -340,7 +341,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 %                     disp(['Fixation_index: ', num2str(fixation_index)]);
                     
                     % line = obj.lineMatrix(:, frame);
-                    i = repmat(line', obj.canvasSize(2), 1);
+                    i = repmat(line', canvas_size_y, 1);
                     % if fixation_index > obj.num_fixations
                     %     fixation_index = obj.num_fixations;
                     % end
