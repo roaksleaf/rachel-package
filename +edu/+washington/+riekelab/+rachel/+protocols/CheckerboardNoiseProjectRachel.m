@@ -108,7 +108,7 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
 
             disp('pre lineMatcall')
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.backgroundRatio, obj.backgroundFrameDwell, 1);
+                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.backgroundRatio, obj.backgroundFrameDwell, obj.pairedBars); %last argument used to be a 1 pre 5/14/25
             disp('post line mat call')
             
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...

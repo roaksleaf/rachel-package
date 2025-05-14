@@ -1,6 +1,6 @@
 % Plays movies...
 % Note: Requires movies in .mp4 format.
-classdef ModifiedStimulus < 
+classdef ModifiedStimulus < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
         amp                             % Output amplifier
@@ -177,6 +177,8 @@ classdef ModifiedStimulus <
                 end
 
             end
+            
+            matrixSize=size(obj.imageMatrix);
 
             obj.backgroundIntensity = mean(double(obj.imageMatrix(:))/255);
             obj.backgroundFrame = uint8(obj.backgroundIntensity*ones(matrixSize(1), matrixSize(2)));
