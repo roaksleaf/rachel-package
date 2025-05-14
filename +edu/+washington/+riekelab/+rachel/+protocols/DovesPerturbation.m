@@ -296,8 +296,26 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
 
+            % state.frame is 0-indexed, so add 1 to get the first frame
+            line = obj.lineMatrix(:, state.frame+1);
+            
+            pre_frames = round(60 * (obj.preTime/1e3));
+            stim_frames = round(60 * (obj.stimTime/1e3));
+            if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
+                fixation_index = obj.all_fix_indices(frame - pre_frames+1);
+                if fixation_index > obj.num_fixations
+                    fixation_index = obj.num_fixations;
+                end
+                if fixation_index >= 1
+                    doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
+                else
+                    doves_frame = obj.backgroundIntensity * ones(obj.canvasSize(1), obj.canvasSize(2));
+                
+                end
+
+            end
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
-                @(state)getNewCheckerboard(obj, state.frame+1));
+                @(state)getNewCheckerboard(obj, state.frame+1, line, doves_frame, pre_frames, stim_frames));
             p.addController(checkerboardController); %add the controller
             
             if (obj.apertureDiameter > 0) %% Create aperture
@@ -317,27 +335,25 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
           
             disp('post board visible')
 
-            function i = getNewCheckerboard(obj, frame)
-                % Get fixation index
-                pre_frames = round(60 * (obj.preTime/1e3));
-                stim_frames = round(60 * (obj.stimTime/1e3));
+            function i = getNewCheckerboard(obj, frame, line, doves_frame, pre_frames, stim_frames)
                 % CHECK ME
                 if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
 %                     disp(['frame: ', num2str(frame-pre_frames+1)]);
                     % disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
-                    fixation_index = obj.all_fix_indices(frame - pre_frames+1);
+                    % fixation_index = obj.all_fix_indices(frame - pre_frames+1);
 %                     disp(['Fixation index size: ', num2str(size(all_fix_indices,2))]);
 %                     disp(['Fixation_index: ', num2str(fixation_index)]);
                     
-                    line = obj.lineMatrix(:, frame);
+                    % line = obj.lineMatrix(:, frame);
                     i = repmat(line', obj.canvasSize(2), 1);
-                    if fixation_index > obj.num_fixations
-                        fixation_index = obj.num_fixations;
-                    end
-                    if fixation_index >= 1
-                        doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
-                        i = i + squeeze(doves_frame);
-                    end
+                    % if fixation_index > obj.num_fixations
+                    %     fixation_index = obj.num_fixations;
+                    % end
+                    % if fixation_index >= 1
+                    %     doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
+                    %     i = i + squeeze(doves_frame);
+                    % end
+                    i = i + squeeze(doves_frame);
                     i = uint8(255 * i);
 %                     disp(['Min i: ', num2str(min(i(:)))]);
 %                     disp(['Max i: ', num2str(max(i(:)))]);
