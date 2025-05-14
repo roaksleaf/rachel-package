@@ -341,7 +341,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 %                     disp(['Fixation_index: ', num2str(fixation_index)]);
                     
                     % line = obj.lineMatrix(:, frame);
-                    i = repmat(line', canvas_size_y, 1);
+                    % i = repmat(line', canvas_size_y, 1);
+                    i = line' * ones(1, canvas_size_y);
                     % if fixation_index > obj.num_fixations
                     %     fixation_index = obj.num_fixations;
                     % end
