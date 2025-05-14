@@ -310,7 +310,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % state.frame is 0-indexed, so add 1 to get the first frame
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(obj, state.frame+1, obj.lineMatrix(:, state.frame+1), ...
-                                            obj.dovesMovieMatrix(obj.all_fix_indices(state.frame+1);, :, :), pre_frames, stim_frames));
+                                            obj.dovesMovieMatrix(obj.all_fix_indices(state.frame+1), :, :), pre_frames, stim_frames));
             p.addController(checkerboardController); %add the controller
             
             if (obj.apertureDiameter > 0) %% Create aperture
