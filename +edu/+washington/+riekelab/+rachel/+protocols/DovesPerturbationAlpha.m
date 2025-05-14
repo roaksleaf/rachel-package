@@ -1,5 +1,5 @@
 % Plays 1D noise + doves fixation image, for many fixations of the image.
-classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
+classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
         preTime = 500 % ms
