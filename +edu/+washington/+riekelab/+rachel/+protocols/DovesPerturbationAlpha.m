@@ -301,7 +301,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             % state.frame is 0-indexed, so add 1 to get the first frame
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(state.frame+1, obj.lineMatrix(:, state.frame+1), ...
-                                            pre_frames, stim_frames, obj.canvasSize(2)));
+                                            pre_frames, stim_frames, obj.numChecksY));
             p.addController(checkerboardController); %add the controller
             
             if (obj.apertureDiameter > 0) %% Create aperture
@@ -321,10 +321,10 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
           
             disp('post board visible')
 
-            function i = getNewCheckerboard(frame, line, pre_frames, stim_frames, canvas_size_y)
+            function i = getNewCheckerboard(frame, line, pre_frames, stim_frames, num_checks_y)
                 % CHECK ME
                 if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
-                    i = repmat(line', canvas_size_y, 1);
+                    i = repmat(line', num_checks_y, 1);
                     i = uint8(255 * i);
                 else
                     i = obj.initMatrix;
