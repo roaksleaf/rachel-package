@@ -49,6 +49,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
         freezeFEMs = true
         xTraj
         yTraj
+        u_xTraj
+        u_yTraj
         timeTraj
         magnificationFactor
         imageName
@@ -104,7 +106,9 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 u_yTraj = obj.yTraj(fix_indices);
                 num_fix = length(u_xTraj);
             end
-
+            obj.u_xTraj = -u_xTraj;
+            obj.u_yTraj = u_yTraj;
+            obj.num_fixations = num_fix+1;
             disp(['Number of fixations: ', num2str(num_fix)]);
             scene_size = [size(obj.dovesMatrix,1) size(obj.dovesMatrix,2)]*obj.magnificationFactor;
             % Upscale dovesMatrix to scene size
@@ -113,13 +117,13 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             p0 = scene_size/2;
             y_vals = -screen_size(2)/2+1:screen_size(2)/2;
             x_vals = -screen_size(1)/2+1:screen_size(1)/2;
-            dovesMovieMatrix = zeros(num_fix+1, screen_size(1), screen_size(2));
+            dovesMovieMatrix = zeros(obj.num_fixations, screen_size(1), screen_size(2));
             % First frame is background intensity.
             dovesMovieMatrix(1,:,:) = obj.backgroundIntensity * ones(screen_size);
             for i = 1:num_fix
                 % Get the current fixation.
-                xFix = -u_xTraj(i);
-                yFix = u_yTraj(i);
+                xFix = obj.u_xTraj(i);
+                yFix = obj.u_yTraj(i);
                 p = p0 + [yFix, xFix];
                 x_idx = round(p(2) + x_vals);
                 y_idx = round(p(1) + y_vals);
@@ -129,7 +133,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 dovesMovieMatrix(i+1, x_good, y_good) = obj.dovesMatrix(y_idx(y_good), x_idx(x_good))';
             end
             obj.dovesMovieMatrix = permute(dovesMovieMatrix, [1,3,2]);
-            obj.num_fixations = num_fix+1;
+            
             % Compute all_fix_indices
             pre_frames = round(60 * (obj.preTime/1e3));
             stim_frames = round(60 * (obj.stimTime/1e3));
@@ -176,7 +180,8 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             disp('Image contrast reduction');
             disp(['min img: ', num2str(min(obj.img(:)))]);
             disp(['max img: ', num2str(max(obj.img(:)))]);
-            obj.dovesMatrix = obj.img;
+            % obj.dovesMatrix = obj.img;
+            obj.dovesMatrix = uint8(255 * obj.img);
 
             %get appropriate eye trajectories, at 200Hz
             if (obj.freezeFEMs) %freeze FEMs, hang on fixations
@@ -206,6 +211,23 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % Round to nearest integer
             obj.xTraj = round(obj.xTraj);
             obj.yTraj = round(obj.yTraj);
+
+            u_xTraj = unique(obj.xTraj);
+            u_yTraj = unique(obj.yTraj);
+            num_fix = length(u_xTraj);
+            % If > numMaxFixations, keep evenly spaced fixations = numMaxFixations
+            if num_fix > obj.numMaxFixations
+                % Get the indices of the fixations.
+                n_traj = size(obj.xTraj, 2);
+                fix_indices = round(linspace(1, n_traj, obj.numMaxFixations));
+                u_xTraj = obj.xTraj(fix_indices);
+                u_yTraj = obj.yTraj(fix_indices);
+                num_fix = length(u_xTraj);
+            end
+            obj.u_xTraj = -u_xTraj;
+            obj.u_yTraj = u_yTraj;
+            obj.num_fixations = num_fix+1;
+            disp(['Number of fixations: ', num2str(num_fix)]);
             
             % Load the fixations for the image.
             f = load([obj.pkgDir,'\doves\fixations\', obj.imageName, '.mat']);
@@ -242,13 +264,12 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             end
             
             % Generate dovesMovieMatrix
-            obj.computeDovesMovieMatrix();
-            disp('Generate dovesMovieMatrix');
+            % obj.computeDovesMovieMatrix();
+            % disp('Generate dovesMovieMatrix');
 
             
 
             % generate lineMatrix
-            % disp('pre lineMatcall')
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
                 obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars);
             disp('Generated lineMatrix of size:')
@@ -288,6 +309,10 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
          end
 
          function p = createPresentation(obj)
+            pre_frames = round(60 * (obj.preTime/1e3));
+            stim_frames = round(60 * (obj.stimTime/1e3));
+            tail_frames = round(60 * (obj.tailTime/1e3));
+
             fprintf(1, 'start create presentation\n');
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
@@ -295,22 +320,40 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             %convert from microns to pixels...
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
 
+            %% DOVES scene
+            doves = stage.builtin.stimuli.Image(obj.dovesMatrix);
+            doves.size = [size(obj.dovesMatrix, 2), size(obj.dovesMatrix, 1)]*obj.magnificationFactor;
+            p0 = obj.canvasSize/2;
+            doves.position = p0;
+            doves.setMinFunction(GL.NEAREST);
+            doves.setMagFunction(GL.NEAREST);
+            p.addStimulus(doves);
+
+            % Apply eye trajectories
+            dovesPosition = stage.builtin.controllers.PropertyController(doves, 'position',...
+                @(state)getDovesPosition(state.frame+1, obj.u_xTraj, obj.u_yTraj, p0));
+            p.addController(dovesPosition); %add the controller
+            % Hide during pre & post
+            dovesVisible = stage.builtin.controllers.PropertyController(doves, 'visible', ...
+                @(state)state.frame > pre_frames && state.frame < (pre_frames + stim_frames));
+            p.addController(dovesVisible);
+
+            
+            
             % Create checkerboard
             obj.initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.canvasSize(2),obj.canvasSize(1))));
             board = stage.builtin.stimuli.Image(obj.initMatrix);
             board.size = obj.canvasSize;
             board.position = obj.canvasSize/2;
-            board.setMinFunction(GL.NEAREST); %don't interpolate to scale up board
+            board.setMinFunction(GL.NEAREST);
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
 
 
-            pre_frames = round(60 * (obj.preTime/1e3));
-            stim_frames = round(60 * (obj.stimTime/1e3));
+            
             % state.frame is 0-indexed, so add 1 to get the first frame
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
                 @(state)getNewCheckerboard(state.frame+1, obj.lineMatrix(:, state.frame+1), ...
-                                            obj.dovesMovieMatrix(obj.all_fix_indices(state.frame+1), :, :), ...
                                             pre_frames, stim_frames, obj.canvasSize(2)));
             p.addController(checkerboardController); %add the controller
             
@@ -331,7 +374,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
           
             disp('post board visible')
 
-            function i = getNewCheckerboard(frame, line, doves_frame, pre_frames, stim_frames, canvas_size_y)
+            function i = getNewCheckerboard(frame, line, pre_frames, stim_frames, canvas_size_y)
                 % CHECK ME
                 if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
 %                     disp(['frame: ', num2str(frame-pre_frames+1)]);
@@ -341,8 +384,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
 %                     disp(['Fixation_index: ', num2str(fixation_index)]);
                     
                     % line = obj.lineMatrix(:, frame);
-                    % i = repmat(line', canvas_size_y, 1);
-                    i = line' * ones(1, canvas_size_y);
+                    i = repmat(line', canvas_size_y, 1);
                     % if fixation_index > obj.num_fixations
                     %     fixation_index = obj.num_fixations;
                     % end
@@ -350,7 +392,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                     %     doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
                     %     i = i + squeeze(doves_frame);
                     % end
-                    i = i + squeeze(doves_frame);
+                    % i = i + squeeze(doves_frame);
                     i = uint8(255 * i);
 %                     disp(['Min i: ', num2str(min(i(:)))]);
 %                     disp(['Max i: ', num2str(max(i(:)))]);
