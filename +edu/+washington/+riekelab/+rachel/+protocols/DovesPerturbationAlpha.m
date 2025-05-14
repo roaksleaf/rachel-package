@@ -277,7 +277,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
                 % Get the current position.
                 if fix_index == 1
                     % Move totally off screen
-                    dovesPos = p0*3;
+                    dovesPos = p0*10;
                 else
                     fix_index = fix_index - 1;
                     dovesPos = p0 + [u_yTraj(fix_index), u_xTraj(fix_index)];
