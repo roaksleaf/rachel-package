@@ -148,7 +148,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             all_fix_indices = squeeze(all_fix_indices);
             obj.all_fix_indices = all_fix_indices;
             disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
-            disp(['Fixation index size: ', num2str(size(all_fix_indices,1))]);
+            disp(['Fixation index size: ', num2str(size(all_fix_indices,2))]);
 
          end
         
