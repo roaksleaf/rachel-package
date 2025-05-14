@@ -79,6 +79,10 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             obj.gridSizePix = obj.rig.getDevice('Stage').um2pix(obj.gridSize);
             obj.stepsPerStixel = max(round(obj.stixelSizePix / obj.gridSizePix), 1);
             obj.stixelShiftPix = round(obj.stixelSizePix / obj.stepsPerStixel);
+            disp(['stixelSizePix: ', num2str(obj.stixelSizePix)]);
+            disp(['gridSizePix: ', num2str(obj.gridSizePix)]);
+            disp(['stepsPerStixel: ', num2str(obj.stepsPerStixel)]);
+            disp(['stixelShiftPix: ', num2str(obj.stixelShiftPix)]);
 
             % Get the resources directory.
             obj.pkgDir = manookinlab.Package.getResourcePath();
@@ -351,7 +355,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
                     % Get the current position.
                     xPos = round(obj.positionStream.rand(1, obj.stepsPerStixel) * obj.stixelShiftPix);
                     % Get the new position.
-                    pos = [xPos(frame), 0] + obj.canvasSize/2;
+                    pos = [xPos, 0] + obj.canvasSize/2;
                 end
             end
             disp('At end of create presentation');
