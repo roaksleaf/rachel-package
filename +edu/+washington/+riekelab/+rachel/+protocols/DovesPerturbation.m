@@ -133,11 +133,23 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % Compute all_fix_indices
             pre_frames = round(60 * (obj.preTime/1e3));
             stim_frames = round(60 * (obj.stimTime/1e3));
+            tail_frames = round(60 * (obj.tailTime/1e3));
             all_fix_indices = 1:obj.num_fixations;
             n_frames_per_fix = ceil(stim_frames / obj.num_fixations);
             all_fix_indices = repelem(all_fix_indices, n_frames_per_fix);
+            % Set max to num_fixations
+            all_fix_indices(all_fix_indices > obj.num_fixations) = obj.num_fixations;
+            % Set min to 1
+            all_fix_indices(all_fix_indices < 1) = 1;
+            % Prepend pre_frames of ones
+            all_fix_indices = [ones(1, pre_frames), all_fix_indices];
+            % Append tail_frames of ones
+            all_fix_indices = [all_fix_indices, ones(1, tail_frames)];
             all_fix_indices = squeeze(all_fix_indices);
             obj.all_fix_indices = all_fix_indices;
+            disp(['Number of frames per fixation: ', num2str(n_frames_per_fix)]);
+            disp(['Fixation index size: ', num2str(size(all_fix_indices,1))]);
+
          end
         
          function getImageSubject(obj)
@@ -259,10 +271,6 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
                 obj.lineMatrix(:, frame) = circshift(obj.lineMatrix(:, frame), x_shifts(frame));
             end
             
-            
-
-
-            
             % Add epoch parameters.
             epoch.addParameter('noiseSeed', obj.noiseSeed);
             epoch.addParameter('useFixedSeed', obj.useFixedSeed);
@@ -296,26 +304,13 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
 
-            % state.frame is 0-indexed, so add 1 to get the first frame
-            line = obj.lineMatrix(:, state.frame+1);
-            
+
             pre_frames = round(60 * (obj.preTime/1e3));
             stim_frames = round(60 * (obj.stimTime/1e3));
-            if (frame >= pre_frames) && (frame < pre_frames + stim_frames)
-                fixation_index = obj.all_fix_indices(frame - pre_frames+1);
-                if fixation_index > obj.num_fixations
-                    fixation_index = obj.num_fixations;
-                end
-                if fixation_index >= 1
-                    doves_frame = obj.dovesMovieMatrix(fixation_index, :, :);
-                else
-                    doves_frame = obj.backgroundIntensity * ones(obj.canvasSize(1), obj.canvasSize(2));
-                
-                end
-
-            end
+            % state.frame is 0-indexed, so add 1 to get the first frame
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
-                @(state)getNewCheckerboard(obj, state.frame+1, line, doves_frame, pre_frames, stim_frames));
+                @(state)getNewCheckerboard(obj, state.frame+1, obj.lineMatrix(:, state.frame+1), ...
+                                            obj.dovesMovieMatrix(obj.all_fix_indices(state.frame+1);, :, :);, pre_frames, stim_frames));
             p.addController(checkerboardController); %add the controller
             
             if (obj.apertureDiameter > 0) %% Create aperture
