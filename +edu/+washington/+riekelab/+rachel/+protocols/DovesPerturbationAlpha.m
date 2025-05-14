@@ -275,7 +275,13 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             p.addController(dovesPosition); %add the controller
             function dovesPos = getDovesPosition(fix_index, u_xTraj, u_yTraj, p0)
                 % Get the current position.
-                dovesPos = p0 + [u_yTraj(fix_index), u_xTraj(fix_index)];
+                if fix_index == 1
+                    % Move totally off screen
+                    dovesPos = p0*3;
+                else
+                    fix_index = fix_index - 1;
+                    dovesPos = p0 + [u_yTraj(fix_index), u_xTraj(fix_index)];
+                end
             end
 
 
