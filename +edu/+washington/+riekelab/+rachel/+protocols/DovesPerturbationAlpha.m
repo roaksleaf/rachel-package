@@ -353,9 +353,11 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             function pos = getNewPosition(obj, frame)
                 if mod(frame, obj.frameDwell) == 0
                     % Get the current position.
-                    xPos = round(obj.positionStream.rand(1, obj.stepsPerStixel) * obj.stixelShiftPix);
+                    xPos = round(obj.positionStream.rand(0, obj.stepsPerStixel) * obj.stixelShiftPix);
                     % Get the new position.
                     pos = [xPos, 0] + obj.canvasSize/2;
+                else
+                    pos = obj.canvasSize/2;
                 end
             end
             disp('At end of create presentation');
