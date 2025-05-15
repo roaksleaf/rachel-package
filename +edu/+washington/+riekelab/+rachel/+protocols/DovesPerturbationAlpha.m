@@ -299,7 +299,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             %% Noise scene
             obj.initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
             board = stage.builtin.stimuli.Image(obj.initMatrix);
-            board.size = [obj.numXChecks, obj.numYChecks]*obj.stixelSizePix;
+            board.size = [obj.numChecksX, obj.numChecksY]*obj.stixelSizePix;
             %board.size = obj.canvasSize;
             board.position = obj.canvasSize/2;
             board.opacity = obj.noiseStdv;
