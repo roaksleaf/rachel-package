@@ -350,7 +350,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
                     @(state)getNewPosition(obj, state.frame+1));
                 p.addController(posController);
             end
-            function pos = getNewPosition(obj, frame)
+            function p = getNewPosition(obj, frame)
                 persistent pos
                 if frame == 1
                     pos = obj.canvasSize/2;
@@ -362,6 +362,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
                         pos = [xPos, 0] + obj.canvasSize/2;
                     end
                 end
+                p = pos;
             end
             disp('At end of create presentation');
             
