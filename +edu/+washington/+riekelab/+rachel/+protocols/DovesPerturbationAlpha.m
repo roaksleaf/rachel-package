@@ -74,11 +74,15 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
 
             % Convert from microns to pixels...
             obj.stixelSizePix = obj.rig.getDevice('Stage').um2pix(obj.stixelSize);
-            obj.numChecksX = round(obj.canvasSize(1) / obj.stixelSizePix);
+            obj.numChecksX = round(obj.canvasSize(1) / obj.stixelSizePix) + 2;
             obj.numChecksY = round(obj.canvasSize(2) / obj.stixelSizePix);
             obj.gridSizePix = obj.rig.getDevice('Stage').um2pix(obj.gridSize);
             obj.stepsPerStixel = max(round(obj.stixelSizePix / obj.gridSizePix), 1);
             obj.stixelShiftPix = round(obj.stixelSizePix / obj.stepsPerStixel);
+            disp(['stixelSizePix: ', num2str(obj.stixelSizePix)]);
+            disp(['gridSizePix: ', num2str(obj.gridSizePix)]);
+            disp(['stepsPerStixel: ', num2str(obj.stepsPerStixel)]);
+            disp(['stixelShiftPix: ', num2str(obj.stixelShiftPix)]);
 
             % Get the resources directory.
             obj.pkgDir = manookinlab.Package.getResourcePath();
@@ -292,17 +296,16 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
 
             
             
-            % Create checkerboard
+            %% Noise scene
             obj.initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
             board = stage.builtin.stimuli.Image(obj.initMatrix);
-            board.size = obj.canvasSize;
+            board.size = [obj.numChecksX, obj.numChecksY]*obj.stixelSizePix;
+            %board.size = obj.canvasSize;
             board.position = obj.canvasSize/2;
             board.opacity = obj.noiseStdv;
             board.setMinFunction(GL.NEAREST);
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
-
-
             
             % state.frame is 0-indexed, so add 1 to get the first frame
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
@@ -325,7 +328,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             %     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
             % p.addController(boardVisible); 
           
-            disp('post board visible')
+            
 
             function i = getNewCheckerboard(frame, line, pre_frames, stim_frames, num_checks_y)
                 % CHECK ME
@@ -338,6 +341,24 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
                
                 
             end
+
+            % Add position controller for jitter
+            if obj.stepsPerStixel > 1
+                % Get the current position.
+                % Create the position controller.
+                posController = stage.builtin.controllers.PropertyController(board, 'position',...
+                    @(state)getNewPosition(obj, state.frame+1));
+                p.addController(posController);
+            end
+            function pos = getNewPosition(obj, frame)
+                if mod(frame, obj.frameDwell) == 0
+                    % Get the current position.
+                    xPos = round(obj.positionStream.rand(1, obj.stepsPerStixel) * obj.stixelShiftPix);
+                    % Get the new position.
+                    pos = [xPos, 0] + obj.canvasSize/2;
+                end
+            end
+            disp('At end of create presentation');
             
         end
 
