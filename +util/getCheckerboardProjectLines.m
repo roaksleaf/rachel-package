@@ -1,5 +1,5 @@
 function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise,...
-    noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars)
+    noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField)
 
     dimBackground = 0;
     noiseStream = RandStream('mt19937ar', 'Seed', seed);
@@ -40,13 +40,23 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
             end
         end
         Indices1 = [1:floor(numChecksX/2)];
-        Indices2 = [floor(numChecksX/2):numChecksX];
+        Indices2 = [floor(numChecksX/2)+1:numChecksX];
         if dimBackground == 0
-            lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) - backgroundRatio;
-            lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) + backgroundRatio;
+            if noSplitField == 1
+                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) - backgroundRatio;
+                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) - backgroundRatio;
+            else
+                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) - backgroundRatio;
+                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) + backgroundRatio;
+            end
         else
-            lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) + backgroundRatio;
-            lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) - backgroundRatio;
+            if noSplitField == 1
+                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) + backgroundRatio;
+                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) + backgroundRatio;
+            else
+                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) + backgroundRatio;
+                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) - backgroundRatio;
+            end
         end
     end
     for frame = preFrames + stmFrames + 1:preFrames + stmFrames + tailFrames

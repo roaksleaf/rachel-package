@@ -18,6 +18,8 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         amp % Output amplifier
         xOffset = -58 %offset of image to move split field, in pixels, default is equal sides with frame monitor for vert bars
         yOffset = 0 %offset of image to move split field, in pixels
+        noSplitField = 0 %removes split field if == 1, background ratio applied evenly
+        maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec
     end
 
     properties (Hidden)
@@ -108,7 +110,7 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
 
             disp('pre lineMatcall')
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.backgroundRatio, obj.backgroundFrameDwell, obj.pairedBars); %last argument used to be a 1 pre 5/14/25
+                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.backgroundRatio, obj.backgroundFrameDwell, obj.pairedBars, obj.noSplitField); %last argument used to be a 1 pre 5/14/25
             disp('post line mat call')
             
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
