@@ -1,5 +1,5 @@
 function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise,...
-    noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField)
+    noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps)
 
     dimBackground = 0;
     noiseStream = RandStream('mt19937ar', 'Seed', seed);
@@ -12,21 +12,54 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
         lineMatrix(:, frame) = backgroundIntensity;
     end
     Indices = [1:floor(numChecksX/2)]*2;
+
+    % Random contrast switching setup
+    minInterval = 15;
+    maxInterval = 300;
+
+    contrastStream = RandStream('mt19937ar', 'Seed', seed + 1); % different from noiseStream
+    contrastLevels = [0.2, 0.5, 1.0, 2.0]; % example set of contrast multipliers
+
+    % Build contrast change frames
+    contrastChangeFrames = [];
+    nextContrastFrame = preFrames + randi(contrastStream, [minInterval, maxInterval]);
+
+    while nextContrastFrame <= preFrames + stmFrames
+        contrastChangeFrames = [contrastChangeFrames, nextContrastFrame];
+        nextContrastFrame = nextContrastFrame + randi(contrastStream, [minInterval, maxInterval]);
+    end
+
+    % Initialize contrast
+    if contrastJumps
+        currentContrast = noiseStdv * contrastLevels(randi(contrastStream, [1, length(contrastLevels)]));
+        contrastPointer = 1;
+    else
+        currentContrast=noiseStdv
+    end
+
     for frame = preFrames+1:preFrames+stmFrames
+
+        % Check for contrast change
+        if contrastPointer <= length(contrastChangeFrames) && frame == contrastChangeFrames(contrastPointer)
+            currentContrast = noiseStdv * contrastLevels(randi(contrastStream, [1, length(contrastLevels)]));
+            contrastPointer = contrastPointer + 1;
+        end
+
         if mod(frame-preFrames, frameDwell) == 0 %noise update
             if binaryNoise == 1
                 maxVar = (1-backgroundRatio) - backgroundIntensity; %changed from 0.8
                 variation = 2 * maxVar * ...
                     (noiseStream.rand(numChecksX, 1) > 0.5) - (maxVar);
-                lineMatrix(:, frame) = 0.5 + variation*noiseStdv;
+                lineMatrix(:, frame) = 0.5 + variation*currentContrast;
             else
                 lineMatrix(:, frame) = backgroundIntensity + ...
-                    noiseStdv * backgroundIntensity * ...
+                    currentContrast * backgroundIntensity * ...
                     noiseStream.randn(numChecksX, 1);
             end
         else
             lineMatrix(:, frame) = lineMatrix(:, frame-1);
         end
+
         if pairedBars == 1
             lineMatrix(Indices, frame) = -(lineMatrix(Indices-1, frame)-backgroundIntensity)+ ...
                 backgroundIntensity;
