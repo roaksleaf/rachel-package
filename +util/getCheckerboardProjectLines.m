@@ -14,37 +14,35 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
     Indices = [1:floor(numChecksX/2)]*2;
 
     % Random contrast switching setup
-    minInterval = 15;
-    maxInterval = 300;
+    minInterval = 30;
+    maxInterval = 120;
 
     contrastStream = RandStream('mt19937ar', 'Seed', seed + 1); % different from noiseStream
-    contrastLevels = [0.2, 0.5, 1.0, 2.0]; % example set of contrast multipliers
+    if contrastJumps == 1
+        contrastLevels = [0.2, 0.5, 0.7, 1.0]; % example set of contrast multipliers
+    else
+        contrastLevels = [1.0,1.0]; 
+    end
 
     % Build contrast change frames
     contrastChangeFrames = [];
     nextContrastFrame = preFrames + randi(contrastStream, [minInterval, maxInterval]);
-
     while nextContrastFrame <= preFrames + stmFrames
         contrastChangeFrames = [contrastChangeFrames, nextContrastFrame];
         nextContrastFrame = nextContrastFrame + randi(contrastStream, [minInterval, maxInterval]);
     end
 
     % Initialize contrast
-    if contrastJumps
-        currentContrast = noiseStdv * contrastLevels(randi(contrastStream, [1, length(contrastLevels)]));
-        contrastPointer = 1;
-    else
-        currentContrast=noiseStdv
-    end
+
+    currentContrast = noiseStdv * contrastLevels(randi(contrastStream, [1, length(contrastLevels)]));
+    contrastPointer = 1;
 
     for frame = preFrames+1:preFrames+stmFrames
-
         % Check for contrast change
         if contrastPointer <= length(contrastChangeFrames) && frame == contrastChangeFrames(contrastPointer)
             currentContrast = noiseStdv * contrastLevels(randi(contrastStream, [1, length(contrastLevels)]));
             contrastPointer = contrastPointer + 1;
         end
-
         if mod(frame-preFrames, frameDwell) == 0 %noise update
             if binaryNoise == 1
                 maxVar = (1-backgroundRatio) - backgroundIntensity; %changed from 0.8

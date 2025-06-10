@@ -227,7 +227,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
 
             % generate lineMatrix
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars, 0);
+                obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars, 0,0);
             disp('Generated lineMatrix of size:')
             disp(size(obj.lineMatrix));
             
