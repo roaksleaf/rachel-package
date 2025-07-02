@@ -5,11 +5,11 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         stimTime = 20000 % ms
         tailTime = 500 % ms
         stixelSize = 60 % um
-        binaryNoise = true %binary checkers - overrides noiseStdv
+        binaryNoise = false %binary checkers - overrides noiseStdv
         pairedBars = true
-        noiseStdv = 0.3 %contrast, as fraction of mean (if contrast jumps, multiplied by contrast multipliers)
-        frameDwell = 1 % Frames per noise update
-        backgroundFrameDwells = [30 120 750] % Frames per noise update
+        noiseStdv = 0.8 %contrast, as fraction of mean (if contrast jumps, multiplied by contrast multipliers)
+        frameDwell = 4 % Frames per noise update
+        backgroundFrameDwells = [30 120 600] % Frames per noise update
         backgroundRatios = [0.3 0.3]
         apertureDiameter = 0 % um
         backgroundIntensity = 0.5 % (0-1)
@@ -20,7 +20,7 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         yOffset = 0 %offset of image to move split field, in pixels
         noSplitField = 0 %removes split field if == 1, background ratio applied evenly
         maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec
-        contrastJumps=1 %randomly add contrast jumps across whole stimulus
+        contrastJumps = 1 %randomly add contrast jumps across whole stimulus
     end
 
     properties (Hidden)

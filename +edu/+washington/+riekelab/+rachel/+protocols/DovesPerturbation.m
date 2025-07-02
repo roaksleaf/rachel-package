@@ -250,7 +250,7 @@ classdef DovesPerturbation < manookinlab.protocols.ManookinLabStageProtocol
             % generate lineMatrix
             % disp('pre lineMatcall')
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars);
+                obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars,0,0);
             disp('Generated lineMatrix of size:')
             disp(size(obj.lineMatrix));
             % Upscale lineMatrix from (numChecksX, frames) to (canvasSize(1), frames)
