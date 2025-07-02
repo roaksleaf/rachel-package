@@ -34,7 +34,7 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
         currentContrast = noiseStdv * contrastLevels(randi(contrastStream, [1, length(contrastLevels)]));
         contrastPointer = 1;
     else
-        currentContrast=noiseStdv
+        currentContrast=noiseStdv;
     end
 
     for frame = preFrames+1:preFrames+stmFrames
