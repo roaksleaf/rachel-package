@@ -44,9 +44,11 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
 
     for frame = preFrames+1:preFrames+stmFrames
         % Check for contrast change
-        if contrastPointer <= length(contrastChangeFrames) && frame == contrastChangeFrames(contrastPointer)
-            currentContrast = noiseStdv * contrastLevels(randi(contrastStream, [1, length(contrastLevels)]));
-            contrastPointer = contrastPointer + 1;
+        if contrastJumps
+            if contrastPointer <= length(contrastChangeFrames) && frame == contrastChangeFrames(contrastPointer)
+                currentContrast = noiseStdv * contrastLevels(randi(contrastStream, [1, length(contrastLevels)]));
+                contrastPointer = contrastPointer + 1;
+            end
         end
         if mod(frame-preFrames, frameDwell) == 0 %noise update
             if binaryNoise == 1
