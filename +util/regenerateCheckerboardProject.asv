@@ -1,0 +1,46 @@
+function [stimulus] = regenerateCheckerboardProject(stim_params, save_path, exp_name, datafile_name, frame_rate)
+    num_epochs = length(stim_params.stim_struct.noiseSeed);
+    
+    % num_frames = 1260;
+    x = stim_params.numChecksX(1);
+    y = stim_params.numChecksY(1);
+    
+    pre_frames = (stim_params.preTime / 1000) * frame_rate;
+    tail_frames = (stim_params.tailTime / 1000) * frame_rate;
+    stim_frames = (stim_params.stimTime / 1000) * frame_rate;
+    num_frames = pre_frames + stim_frames + tail_frames;
+
+    stimulus = zeros(y, x, num_frames, num_epochs);
+
+    for i=1:num_epochs
+        seed = stim_params.noiseSeed(i);
+        numChecksX = stim_params.numChecksX(i);
+        preTime = stim_params.preTime;
+        stimTime = stim_params.stimTime;
+        tailTime = stim_params.tailTime;
+        backgroundIntensity = stim_params.backgroundIntensity;
+        frameDwell = stim_params.frameDwell;
+        binaryNoise = stim_params.binaryNoise;
+        noiseStdv = stim_params.noiseStdv;
+        backgroundRatio = stim_params.backgroundRatio(i);
+        backgroundFrameDwell = stim_params.backgroundFrameDwell(i);
+        pairedBars = stim_params.pairedBars;
+        noSplitField = stim_params.noSplitField;
+    
+        numChecksY = stim_params.numChecksY(i);
+    
+        line_mat = getCheckerboardProjectLines(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
+           noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField);
+    
+        num_frames = size(line_mat, 2);
+    
+        for ii=1:num_frames
+            line = line_mat(:, ii);
+            frame = uint8(255 * repmat(line', numChecksY, 1));
+            stimulus(:, :, ii, i) = frame;
+        end
+    
+    end
+    save_str = append(save_path, exp_name, '_', datafile_name);
+    save(save_str, 'stimulus', '-v7.3')
+end
