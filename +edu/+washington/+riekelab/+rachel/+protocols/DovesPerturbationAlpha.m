@@ -11,7 +11,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
         numMaxFixations = 10 % Maximum number of fixations
         binaryNoise = true %binary checkers
         pairedBars = true
-        noiseStdv = 0.3 %contrast, as fraction of mean
+        noiseOpacity = 0.3 %opacity (0-1)
         frameDwell = 1 % Frames per noise update
         apertureDiameter = 0 % um
         manualMagnification = 1.5         % Override DOVES magnification by setting this >1
@@ -114,7 +114,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             disp(['max img: ', num2str(max(obj.img(:)))]);
             obj.backgroundIntensity = mean(img(:));%set the mean to the mean over the image
             % Calculate imgContrastReduction
-            obj.imgContrastReduction = obj.backgroundIntensity * obj.noiseStdv;
+            obj.imgContrastReduction = obj.backgroundIntensity * obj.noiseOpacity;
             
             % Scale from (0,1) to (0-obj.imageContrastReduction, 1+obj.imageContrastReduction)
             obj.img = img * (1-2*obj.imgContrastReduction) + obj.imgContrastReduction;
@@ -227,7 +227,8 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
 
             % generate lineMatrix
             obj.lineMatrix = util.getCheckerboardProjectLines(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, 1, 0, 1, obj.pairedBars, 0,0);
+                obj.frameDwell, obj.binaryNoise, 1, 1, 1, obj.pairedBars, 0,0);
+                % 
             disp('Generated lineMatrix of size:')
             disp(size(obj.lineMatrix));
             
@@ -246,7 +247,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('imageName', obj.imageName);
             epoch.addParameter('subjectName', obj.subjectName);
             epoch.addParameter('imgContrastReduction', obj.imgContrastReduction);
-            epoch.addParameter('noiseStdv', obj.noiseStdv);
+            epoch.addParameter('noiseOpacity', obj.noiseOpacity);
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
             epoch.addParameter('num_fixations', obj.num_fixations);
             fprintf(1, 'end prepare epoch\n');
@@ -302,7 +303,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             board.size = [obj.numChecksX, obj.numChecksY]*obj.stixelSizePix;
             %board.size = obj.canvasSize;
             board.position = obj.canvasSize/2;
-            board.opacity = obj.noiseStdv;
+            board.opacity = obj.noiseOpacity;
             board.setMinFunction(GL.NEAREST);
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
