@@ -11,7 +11,7 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
     for frame = 1:preFrames + stmFrames
         lineMatrix(:, frame) = backgroundIntensity;
     end
-    Indices = [1:floor(numChecksX/2)]*2;
+    
 
     % Random contrast switching setup
     minInterval = 30;
@@ -41,6 +41,13 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
         currentContrast=noiseStdv;
     end
 
+    %% Calcuate background adjustment
+    % maxVar is maximum possible variation around the backgroundIntensity, scaled down by backgroundRatio
+    maxVar = min([backgroundIntensity, 1 - backgroundIntensity]) * backgroundRatio;
+    % backgroundAdjust applies the context based on backgroundRatio.
+    backgroundAdjust = min([backgroundIntensity, 1 - backgroundIntensity]) - maxVar;
+    % eg-if backgroundIntensity = 0.7, backgroundRatio = 0.8, then
+    % maxVar = 0.3 * 0.8 = 0.24 and backgroundAdjust = 0.3 - 0.24 = 0.06
 
     for frame = preFrames+1:preFrames+stmFrames
         % Check for contrast change
@@ -52,10 +59,9 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
         end
         if mod(frame-preFrames, frameDwell) == 0 %noise update
             if binaryNoise == 1
-                maxVar = (1-backgroundRatio) - backgroundIntensity; %changed from 0.8
                 variation = 2 * maxVar * ...
                     (noiseStream.rand(numChecksX, 1) > 0.5) - (maxVar);
-                lineMatrix(:, frame) = 0.5 + variation*currentContrast;
+                lineMatrix(:, frame) = backgroundIntensity + variation*currentContrast;
             else
                 lineMatrix(:, frame) = backgroundIntensity + ...
                     currentContrast * backgroundIntensity * ...
@@ -65,7 +71,10 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
             lineMatrix(:, frame) = lineMatrix(:, frame-1);
         end
 
+        % For paired bars, make every 2nd bar the opposite of the previous one.
+        % eg-[0.9,0.9] becomes [0.9,0.1]
         if pairedBars == 1
+            Indices = [1:floor(numChecksX/2)]*2;
             lineMatrix(Indices, frame) = -(lineMatrix(Indices-1, frame)-backgroundIntensity)+ ...
                 backgroundIntensity;
         end
@@ -81,19 +90,19 @@ function [lineMatrix, variation] = getCheckerboardProjectLines(seed, numChecksX,
         Indices2 = [floor(numChecksX/2)+1:numChecksX];
         if dimBackground == 0
             if noSplitField == 1
-                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) - backgroundRatio;
-                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) - backgroundRatio;
+                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) - backgroundAdjust;
+                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) - backgroundAdjust;
             else
-                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) - backgroundRatio;
-                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) + backgroundRatio;
+                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) - backgroundAdjust;
+                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) + backgroundAdjust;
             end
         else
             if noSplitField == 1
-                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) + backgroundRatio;
-                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) + backgroundRatio;
+                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) + backgroundAdjust;
+                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) + backgroundAdjust;
             else
-                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) + backgroundRatio;
-                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) - backgroundRatio;
+                lineMatrix(Indices1, frame) = lineMatrix(Indices1, frame) + backgroundAdjust;
+                lineMatrix(Indices2, frame) = lineMatrix(Indices2, frame) - backgroundAdjust;
             end
         end
     end
