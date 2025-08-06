@@ -7,10 +7,10 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         stixelSize = 60 % um
         binaryNoise = false %binary checkers - overrides noiseStdv
         pairedBars = true
-        noiseStdv = 0.8 %contrast, as fraction of mean (if contrast jumps, multiplied by contrast multipliers)
+        noiseStdv = 0.5 %contrast, as fraction of mean (if contrast jumps, multiplied by contrast multipliers)
         frameDwell = 4 % Frames per noise update
-        backgroundFrameDwells = [30 120 600] % Frames per noise update
-        backgroundRatios = [0.3 0.3]
+        backgroundFrameDwells = [30 120 300] % Frames per noise update
+        backgroundRatios = [0.4 0.4]
         apertureDiameter = 0 % um
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
