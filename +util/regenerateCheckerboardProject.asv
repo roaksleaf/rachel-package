@@ -1,46 +1,44 @@
-function [stimulus] = regenerateCheckerboardProject(stim_params, save_path, exp_name, datafile_name, frame_rate)
-    num_epochs = length(stim_params.stim_struct.noiseSeed);
+function [stimulus, line_mat, contrast_mat] = regenerateCheckerboardProject(exp_name, preTime, tailTime, stimTime, noiseSeeds, numChecksXs, ...
+    backgroundIntensity, frameDwell, binaryNoise, noiseStdv, backgroundRatios, backgroundFrameDwells, pairedBars, noSplitField,...
+    contrastJumps, numChecksYs)
+    num_epochs = length(noiseSeeds);
     
-    % num_frames = 1260;
-    x = stim_params.numChecksX(1);
-    y = stim_params.numChecksY(1);
+    x = numChecksXs(1);
+    y = numChecksYs(1);
     
-    pre_frames = (stim_params.preTime / 1000) * frame_rate;
-    tail_frames = (stim_params.tailTime / 1000) * frame_rate;
-    stim_frames = (stim_params.stimTime / 1000) * frame_rate;
+    pre_frames = round(60 * (preTime/1e3));
+    tail_frames = round(60 * (tailTime/1e3));
+    stim_frames = round(60 * (stimTime/1e3));
     num_frames = pre_frames + stim_frames + tail_frames;
 
     stimulus = zeros(y, x, num_frames, num_epochs);
+    line_mat = zeros(x, num_frames, num_epochs);
+    contrast_mat = zeros(num_frames, num_epochs);
 
     for i=1:num_epochs
-        seed = stim_params.noiseSeed(i);
-        numChecksX = stim_params.numChecksX(i);
-        preTime = stim_params.preTime;
-        stimTime = stim_params.stimTime;
-        tailTime = stim_params.tailTime;
-        backgroundIntensity = stim_params.backgroundIntensity;
-        frameDwell = stim_params.frameDwell;
-        binaryNoise = stim_params.binaryNoise;
-        noiseStdv = stim_params.noiseStdv;
-        backgroundRatio = stim_params.backgroundRatio(i);
-        backgroundFrameDwell = stim_params.backgroundFrameDwell(i);
-        pairedBars = stim_params.pairedBars;
-        noSplitField = stim_params.noSplitField;
+        seed = noiseSeeds(i);
+        numChecksX = numChecksXs(i);
+        backgroundRatio = backgroundRatios(i);
+        backgroundFrameDwell = backgroundFrameDwells(i);
     
-        numChecksY = stim_params.numChecksY(i);
-    
-        line_mat = getCheckerboardProjectLines(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
-           noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField);
-    
-        num_frames = size(line_mat, 2);
-    
+        numChecksY = numChecksYs(i);
+        if exp_name > 20250806
+            [line_mat(:,:, i), contrast_mat(:,i)] = util.getCheckerboardProjectLines(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
+               noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps);
+        elseif 20250527 < exp_name <= 20250806
+                line_mat(:,:, i) = archive.Aug62025(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
+               noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps);
+                contrast_mat = 0;
+        elseif 20250514 < exp_name <= 20250527
+                line_mat(:,:, i) = archive.getCheckerboardProjectLines_May272025(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
+               noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps);
+                contrast_mat = 0;
+        
         for ii=1:num_frames
-            line = line_mat(:, ii);
+            line = line_mat(:, ii, i);
             frame = uint8(255 * repmat(line', numChecksY, 1));
             stimulus(:, :, ii, i) = frame;
         end
     
     end
-    save_str = append(save_path, exp_name, '_', datafile_name);
-    save(save_str, 'stimulus', '-v7.3')
 end
