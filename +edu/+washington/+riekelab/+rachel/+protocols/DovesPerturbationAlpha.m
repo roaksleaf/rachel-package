@@ -18,6 +18,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
         onlineAnalysis = 'none'
         numberOfAverages = uint16(60) % number of epochs to queue
         amp % Output amplifier
+        alternateFixedSeed = false
     end
 
     properties (Hidden)
@@ -40,7 +41,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
         all_fix_indices
         lineMatrix
         dimBackground
-        useFixedSeed = true     % Toggle between fixed and random seeds
+        useFixedSeed = false     % Toggle between fixed and random seeds if alternateFixedSeed = true else always false
         imgContrastReduction
         im % All image data
         img % Current image (0-pad,1+pad)
@@ -208,6 +209,7 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             fprintf(1, 'start prepare epoc\n');
             prepareEpoch@manookinlab.protocols.ManookinLabStageProtocol(obj, epoch);
             
+            
             % Alternating seed for each epoch
             if obj.useFixedSeed
                 obj.noiseSeed = 1;
@@ -216,7 +218,13 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             end
             
             % Toggle the seed usage for the next epoch
-            obj.useFixedSeed = ~obj.useFixedSeed;
+            % obj.useFixedSeed = ~obj.useFixedSeed;
+                        % Toggle the seed usage for the next epoch
+            if ~obj.alternateFixedSeed
+                obj.useFixedSeed = false;
+            else
+                obj.useFixedSeed = ~obj.useFixedSeed;
+            end
 
             if length(unique(obj.stimulusIndices)) > 1
                 % Set the current stimulus trajectory.

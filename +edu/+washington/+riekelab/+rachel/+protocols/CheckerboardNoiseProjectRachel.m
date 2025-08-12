@@ -21,6 +21,8 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         noSplitField = 0 %removes split field if == 1, background ratio applied evenly
         maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec
         contrastJumps = 1 %randomly add contrast jumps across whole stimulus
+        alternateFixedSeed = false
+
     end
 
     properties (Hidden)
@@ -35,7 +37,7 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
         lineMatrix
         dimBackground
         loadedFilter            % Loaded linear filter from .mat file
-        useFixedSeed = true     % Toggle between fixed and random seeds
+        useFixedSeed = false        % Toggle between fixed and random seeds if alternateFixedSeed = true else always false
         backgroundFrameDwell
         backgroundRatio
     end
@@ -71,7 +73,11 @@ classdef CheckerboardNoiseProjectRachel < manookinlab.protocols.ManookinLabStage
 %             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
             
             % Toggle the seed usage for the next epoch
-            obj.useFixedSeed = ~obj.useFixedSeed;
+            if ~obj.alternateFixedSeed
+                obj.useFixedSeed = false;
+            else
+                obj.useFixedSeed = ~obj.useFixedSeed;
+            end
             
             %Choose next background frame dwell 
             obj.backgroundFrameDwell = obj.backgroundFrameDwells(mod(obj.numEpochsCompleted,length(obj.backgroundFrameDwells))+1);
