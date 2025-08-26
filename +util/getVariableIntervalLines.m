@@ -1,11 +1,13 @@
-function [lineMatrix, contrast_trace] = getCheckerboardProjectLines(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise,...
-    noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps)
+function [lineMatrix, contrast_trace] = getVariableIntervalLines(seed, numChecksX, preTime, preInterval, tailInterval, tailTime, backgroundIntensity, frameDwell, binaryNoise,...
+    noiseStdv, backgroundRatio, pairedBars, contrastJumps, increment)
 
     dimBackground = 0;
     noiseStream = RandStream('mt19937ar', 'Seed', seed);
     preFrames = round(60 * (preTime/1e3));
-    stmFrames = round(60 * (stimTime/1e3));
     tailFrames = round(60 * (tailTime/1e3));
+    preIntervalFrames = round(60 * (preInterval/1e3));
+    tailIntervalFrames = round(60 * (tailInterval/1e3));
+    stmFrames = preIntervalFrames+tailIntervalFrames;
     
     lineMatrix = zeros(numChecksX,preFrames+stmFrames+tailFrames);
     unedited_mat = zeros(numChecksX,preFrames+stmFrames+tailFrames);
@@ -43,7 +45,7 @@ function [lineMatrix, contrast_trace] = getCheckerboardProjectLines(seed, numChe
         currentContrast=noiseStdv;
     end
 
-    %% Calcuate background adjustment
+    % Calcuate background adjustment
     % maxVar is maximum possible variation around the backgroundIntensity, scaled down by backgroundRatio
     maxVar = min([backgroundIntensity, 1 - backgroundIntensity]) * backgroundRatio;
     % backgroundAdjust applies the context based on backgroundRatio.
@@ -54,13 +56,6 @@ function [lineMatrix, contrast_trace] = getCheckerboardProjectLines(seed, numChe
 
     for frame = preFrames+1:preFrames+stmFrames
 
-        if mod(frame-preFrames, backgroundFrameDwell) == 0
-            if (dimBackground == 0)
-                dimBackground = 1;
-            else
-                dimBackground = 0;
-            end
-        end
         % Check for contrast change
         if contrastJumps
             if contrastPointer <= length(contrastChangeFrames) && frame == contrastChangeFrames(contrastPointer)
@@ -95,29 +90,25 @@ function [lineMatrix, contrast_trace] = getCheckerboardProjectLines(seed, numChe
             unedited_mat(:, frame) = unedited_mat(:, frame-1);
         end
 
-        Indices1 = [1:floor(numChecksX/2)];
-        Indices2 = [floor(numChecksX/2)+1:numChecksX];
-        if dimBackground == 0
-            if noSplitField == 1
-                lineMatrix(Indices1, frame) = unedited_mat(Indices1, frame) - backgroundAdjust;
-                lineMatrix(Indices2, frame) = unedited_mat(Indices2, frame) - backgroundAdjust;
-            else
-                lineMatrix(Indices1, frame) = unedited_mat(Indices1, frame) - backgroundAdjust;
-                lineMatrix(Indices2, frame) = unedited_mat(Indices2, frame) + backgroundAdjust;
-            end
-        else
-            if noSplitField == 1
-                lineMatrix(Indices1, frame) = unedited_mat(Indices1, frame) + backgroundAdjust;
-                lineMatrix(Indices2, frame) = unedited_mat(Indices2, frame) + backgroundAdjust;
-            else
-                lineMatrix(Indices1, frame) = unedited_mat(Indices1, frame) + backgroundAdjust;
-                lineMatrix(Indices2, frame) = unedited_mat(Indices2, frame) - backgroundAdjust;
-            end
-        end
-
     end
+    
+    for frame=preFrames:preFrames+preIntervalFrames
+        if increment
+            lineMatrix(:, frame) = unedited_mat(:, frame) - backgroundAdjust;
+        else
+            lineMatrix(:, frame) = unedited_mat(:, frame) + backgroundAdjust;
+        end
+    end
+    
+    for frame=preFrames+preIntervalFrames+1:preFrames+preIntervalFrames+1+tailIntervalFrames
+        if increment
+            lineMatrix(:, frame) = unedited_mat(:, frame) + backgroundAdjust;
+        else
+            lineMatrix(:, frame) = unedited_mat(:, frame) - backgroundAdjust;
+        end
+    end     
+    
     for frame = preFrames + stmFrames + 1:preFrames + stmFrames + tailFrames
         lineMatrix(:, frame) = backgroundIntensity;
     end
-    disp(size(contrast_trace))
 end
