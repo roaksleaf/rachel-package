@@ -248,7 +248,11 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('noiseSeed', obj.noiseSeed);
             epoch.addParameter('useFixedSeed', obj.useFixedSeed);
             epoch.addParameter('stixelSize', obj.stixelSize);
+            epoch.addParameter('stixelSizePix', obj.stixelSizePix);
             epoch.addParameter('gridSize', obj.gridSize);
+            epoch.addParameter('gridSizePix', obj.gridSizePix);
+            epoch.addParameter('stepsPerStixel', obj.stepsPerStixel);
+            epoch.addParameter('stixelShiftPix', obj.stixelShiftPix);
             epoch.addParameter('numChecksX', obj.numChecksX);
             epoch.addParameter('numChecksY', obj.numChecksY);
             epoch.addParameter('stimulusIndex', obj.stimulusIndex);
@@ -258,6 +262,11 @@ classdef DovesPerturbationAlpha < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('noiseOpacity', obj.noiseOpacity);
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
             epoch.addParameter('num_fixations', obj.num_fixations);
+            epoch.addParameter('all_fix_indices', obj.all_fix_indices);
+            epoch.addParameter('magnificationFactor', obj.magnificationFactor);
+            epoch.addParameter('u_xTraj', obj.u_xTraj);
+            epoch.addParameter('u_yTraj', obj.u_yTraj);
+
             fprintf(1, 'end prepare epoch\n');
          end
 
