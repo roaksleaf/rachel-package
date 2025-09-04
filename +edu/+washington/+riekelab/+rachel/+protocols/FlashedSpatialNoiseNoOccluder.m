@@ -11,12 +11,12 @@ classdef FlashedSpatialNoiseNoOccluder <  manookinlab.protocols.ManookinLabStage
         numNoiseRepeats = 10;
         numberOfAverages = uint16(180) % number of epochs to queue
         amp                             % Output amplifier
-        stimTime = 1000;
+        stimTime = 600;
     end
     
     properties (Hidden)
         ampType
-        initMatrix
+        imageMatrix
         noiseSeed
         noiseStream
     end
@@ -39,7 +39,10 @@ classdef FlashedSpatialNoiseNoOccluder <  manookinlab.protocols.ManookinLabStage
 
         function prepareRun(obj)
             prepareRun@manookinlab.protocols.ManookinLabStageProtocol(obj);
-            obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
+            if ~obj.isMeaRig
+                obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
+            end
+%             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
 % 
 %             if numel(obj.rig.getDeviceNames('Amp')) < 2
 %                 obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
@@ -72,57 +75,71 @@ classdef FlashedSpatialNoiseNoOccluder <  manookinlab.protocols.ManookinLabStage
 %             duration = ((obj.preTime + obj.flashTime + obj.tailTime) * obj.numNoiseRepeats) / 1e3;
 %             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
 %             epoch.addResponse(device);
-         
+%          
 %             if numel(obj.rig.getDeviceNames('Amp')) >= 2
 %                 epoch.addResponse(obj.rig.getDevice(obj.amp2));
 %             end
-%                         
-%             obj.noiseSeed = RandStream.shuffleSeed;
-%             
-%             %at start of epoch, set random stream
-%             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
-% 
-%             epoch.addParameter('noiseSeed', obj.noiseSeed);
+                        
+            obj.noiseSeed = RandStream.shuffleSeed;
+            
+            %at start of epoch, set random stream
+            obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
+
+            epoch.addParameter('noiseSeed', obj.noiseSeed);
             disp('end prepare epoch')
         end
         
         function p = createPresentation(obj)  
             disp('start create presentation')
-%             p = stage.core.Presentation((obj.preTime + obj.flashTime + obj.tailTime) * obj.numNoiseRepeats * 1e-3); %create presentation of specified duration
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
+%             p = stage.core.Presentation((obj.preTime + obj.flashTime + obj.tailTime) * obj.numNoiseRepeats * 1e-3); %create presentation of specified duration
+%             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
 %             
-%             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
+            canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
 %             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
-% %             
-%             % Create image
+            disp('canvasSize') 
+            % Create image
 %             obj.initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(canvasSize/4)));
-%             board = stage.builtin.stimuli.Image(obj.initMatrix);
-%             board.size = canvasSize;
-%             board.position = canvasSize/2;
-%             board.setMinFunction(GL.NEAREST); %don't interpolate to scale up board
-%             board.setMagFunction(GL.NEAREST);
-%             p.addStimulus(board);
+            obj.imageMatrix = uint8(255 .*(obj.backgroundIntensity .* ones(canvasSize)));
+            disp('img matrix')
+            scene = stage.builtin.stimuli.Image(obj.imageMatrix);
+            disp('scene')
+            scene.size = canvasSize;
+            scene.position = canvasSize/2;
+            scene.setMinFunction(GL.LINEAR);
+            scene.setMagFunction(GL.LINEAR);
+
+%             scene.setMinFunction(GL.NEAREST); %don't interpolate to scale up board
+%             scene.setMagFunction(GL.NEAREST);
+            disp('mag Function')
+
+            p.addStimulus(scene);
+            sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
+                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+            p.addController(sceneVisible);
+            disp('post visible')
 %             preFrames = round(60 * (obj.preTime/1e3));
 %             flashDurFrames = round(60 * ((obj.preTime + obj.flashTime + obj.tailTime))/1e3);
-%             imageController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
+%             imageController = stage.builtin.controllers.PropertyController(scene, 'imageMatrix',...
 %                 @(state)getNewImage(obj, state.frame, preFrames, flashDurFrames));
 %             p.addController(imageController); %add the controller
-
+% 
 %             function i = getNewImage(obj, frame, preFrames, flashDurFrames)
 %                 persistent boardMatrix;
-%                 curFrame = rem(frame, flashDurFrames);
-%                 if curFrame == preFrames
-%                     noiseMatrix = imgaussfilt(obj.noiseStream.randn(size(obj.initMatrix)), obj.noiseFilterSD);
-%                     noiseMatrix = noiseMatrix / std(noiseMatrix(:));
-%                     boardMatrix = obj.initMatrix - 255*obj.backgroundIntensity + uint8(255 * noiseMatrix * obj.backgroundIntensity * obj.noiseContrast + 255*obj.backgroundIntensity);
-%                 end
-%                 if curFrame == 0
-%                     boardMatrix = 255 * obj.backgroundIntensity .* ones(size(obj.initMatrix));
-%                 end
-%                 if curFrame == (flashDurFrames-1)
-%                     boardMatrix = 255 * obj.backgroundIntensity .* ones(size(obj.initMatrix));
-%                 end
+%                 boardMatrix = ones(size(obj.imageMatrix));
+% %                 curFrame = rem(frame, flashDurFrames);
+% %                 if curFrame == preFrames
+% %                     noiseMatrix = imgaussfilt(obj.noiseStream.randn(size(obj.imageMatrix)), obj.noiseFilterSD);
+% %                     noiseMatrix = noiseMatrix / std(noiseMatrix(:));
+% %                     boardMatrix = obj.imageMatrix - 255*obj.backgroundIntensity + uint8(255 * noiseMatrix * obj.backgroundIntensity * obj.noiseContrast + 255*obj.backgroundIntensity);
+% %                 end
+% %                 if curFrame == 0
+% %                     boardMatrix = 255 * obj.backgroundIntensity .* ones(size(obj.imageMatrix));
+% %                 end
+% %                 if curFrame == (flashDurFrames-1)
+% %                     boardMatrix = 255 * obj.backgroundIntensity .* ones(size(obj.imageMatrix));
+% %                 end
 %                 i = uint8(boardMatrix);
 %             end
 % 
