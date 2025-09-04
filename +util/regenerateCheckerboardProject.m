@@ -23,21 +23,17 @@ function [stimulus, line_mat, contrast_mat] = regenerateCheckerboardProject(exp_
     
         numChecksY = numChecksYs(i);
         if exp_name > 20250806
-            disp('using most recent function')
             [line_mat(:,:, i), contrast_mat(:,i)] = util.getCheckerboardProjectLines(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
                noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps);
         elseif (20250527 < exp_name) && (exp_name <= 20250806)
-            disp('using Aug62025 function')
                 line_mat(:,:, i) = archive.getCheckerboardProjectLines_Aug62025(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
                noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps);
                 contrast_mat = 0;
         elseif (20250514 < exp_name) && (exp_name <= 20250527)
-            disp('using May272025 function')
                 line_mat(:,:, i) = archive.getCheckerboardProjectLines_May272025(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
                noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps);
                 contrast_mat = 0;
         elseif exp_name <= 20250514
-            disp('using oldest function')
                 line_mat(:,:, i) = archive.getCheckerboardProjectLines_May272025(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
                noiseStdv, backgroundRatio, backgroundFrameDwell, pairedBars, noSplitField, contrastJumps);
                 contrast_mat = 0;
