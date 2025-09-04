@@ -2,20 +2,21 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
         preTime = 500 % ms
-        stimTime = 20000 % ms
+        stimTime = 180000 % ms
         tailTime = 500 % ms
         stixelSize = 60 % um
         binaryNoise = false 
         pairedBars = false
         noiseStdv = 0.3 %contrast, as fraction of mean 
         lowMean = 0.2
-        highMean = 0.8
-        frameDwell = 4 % Frames per noise update
-        backgroundFrameDwells = [30 120 300] % Frames per noise update
+        highMean = 0.6
+        frameDwell = 3 % Frames per noise update
+        backgroundFrameDwells = [60000 20000 10000 5000] % Frames per noise update
+        backgroundRepEpochs = [12 4 2 1]
         apertureDiameter = 0 % um
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(60) % number of epochs to queue
+        numberOfAverages = uint16(62) % number of epochs to queue
         amp % Output amplifier
         maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec
         alternateFixedSeed = false
@@ -36,7 +37,7 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
         loadedFilter            % Loaded linear filter from .mat file
         useFixedSeed = false        % Toggle between fixed and random seeds if alternateFixedSeed = true else always false
         backgroundFrameDwell
-        backgroundRatio
+        backgroundFrameDwellsFull
     end
     
     methods
@@ -55,6 +56,8 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
             stixelSizePix = obj.rig.getDevice('Stage').um2pix(obj.stixelSize);
             obj.numChecksX = round(canvasSize(1) / stixelSizePix);
             obj.numChecksY = round(canvasSize(2) / stixelSizePix);
+            
+            obj.backgroundFrameDwellsFull = repelem(obj.backgroundFrameDwells, obj.backgroundRepEpochs);
          end
         
         function prepareEpoch(obj, epoch)
@@ -77,7 +80,8 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
             end
             
             %Choose next background frame dwell 
-            obj.backgroundFrameDwell = obj.backgroundFrameDwells(mod(obj.numEpochsCompleted,length(obj.backgroundFrameDwells))+1);
+            obj.backgroundFrameDwell = obj.backgroundFrameDwellsFull(mod(obj.numEpochsCompleted,length(obj.backgroundFrameDwellsFull))+1);
+            disp(obj.backgroundFrameDwell)
             
             %at start of epoch, set random stream
 %             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
@@ -85,7 +89,6 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('numChecksX', obj.numChecksX);
             epoch.addParameter('numChecksY', obj.numChecksY);
             epoch.addParameter('backgroundFrameDwell', obj.backgroundFrameDwell);
-            epoch.addParameter('backgroundRatio', obj.backgroundRatio)
             fprintf(1, 'end prepare epoc\n');
          end
 

@@ -24,9 +24,9 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
             end
         end
 
-        if mod(frame-preFrames, frameDwell) == 0 %noise update
+        if (mod(frame-preFrames+1, frameDwell) == 0)  || (frame==preFrames+1) %noise update
             if binaryNoise == 1
-                lineMatrix(:,frame) = targetMean * (1 + C * (2*(rand(numChecksX,1) > 0.5) - 1));
+                lineMatrix(:,frame) = targetMean * (1 + noiseStdv * (2*(rand(numChecksX,1) > 0.5) - 1));
             else
                 lineMatrix(:, frame) = targetMean + (noiseStream.randn(numChecksX, 1) * targetMean * noiseStdv);
             end
@@ -35,8 +35,8 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
             % eg-[0.9,0.9] becomes [0.9,0.1]
             if pairedBars == 1
                 Indices = [1:floor(numChecksX/2)]*2;
-                lineMatrix(Indices, frame) = -(lineMatrix(Indices-1, frame)-backgroundIntensity)+ ...
-                    backgroundIntensity;
+                lineMatrix(Indices, frame) = -(lineMatrix(Indices-1, frame)-targetMean)+ ...
+                    targetMean;
             end
         else
             lineMatrix(:, frame) = lineMatrix(:, frame-1);
