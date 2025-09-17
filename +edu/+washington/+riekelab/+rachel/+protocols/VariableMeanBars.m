@@ -3,6 +3,7 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
     properties
         preTime = 500 % ms
         stimTime = 180000 % ms
+        trackFrames = 3600 %on last repeat, don't do interval for this # of frames
         tailTime = 500 % ms
         stixelSize = 60 % um
         binaryNoise = false 
@@ -11,12 +12,12 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
         lowMean = 0.2
         highMean = 0.6
         frameDwell = 3 % Frames per noise update
-        backgroundFrameDwells = [60000 20000 10000 5000] % Frames per noise update
-        backgroundRepEpochs = [12 4 2 1]
+        backgroundFrameDwells = [3600 1200 600 300 3600 1200 600 300] % Frames per noise update
+        backgroundRepEpochs = [13 5 4 3 13 5 4 3] %26 10 8 6  ==> 13 5 4 3  13 5 4 3 => 13 18 22 25  38 43 47 50
         apertureDiameter = 0 % um
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(62) % number of epochs to queue
+        numberOfAverages = uint16(50) % number of epochs to queue
         amp % Output amplifier
         maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec
         alternateFixedSeed = false
@@ -38,6 +39,8 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
         useFixedSeed = false        % Toggle between fixed and random seeds if alternateFixedSeed = true else always false
         backgroundFrameDwell
         backgroundFrameDwellsFull
+        startDim = true
+        trackEnd = false
     end
     
     methods
@@ -79,8 +82,16 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
                 obj.useFixedSeed = ~obj.useFixedSeed;
             end
             
+            obj.startDim = ~obj.startDim;
+            
             %Choose next background frame dwell 
             obj.backgroundFrameDwell = obj.backgroundFrameDwellsFull(mod(obj.numEpochsCompleted,length(obj.backgroundFrameDwellsFull))+1);
+            nextBackgroundFrameDwell = obj.backgroundFrameDwellsFull(mod(obj.numEpochsCompleted+1,length(obj.backgroundFrameDwellsFull))+1);
+            if obj.backgroundFrameDwell ~= nextBackgroundFrameDwell 
+                obj.trackEnd=true;
+            else
+                obj.trackEnd=false;
+            end
             disp(obj.backgroundFrameDwell)
             
             %at start of epoch, set random stream
@@ -89,6 +100,8 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('numChecksX', obj.numChecksX);
             epoch.addParameter('numChecksY', obj.numChecksY);
             epoch.addParameter('backgroundFrameDwell', obj.backgroundFrameDwell);
+            epoch.addParameter('startDim', obj.startDim);
+            epoch.addParameter('trackEnd', obj.trackEnd);
             fprintf(1, 'end prepare epoc\n');
          end
 
@@ -113,8 +126,10 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
             p.addStimulus(board);
 
             disp('pre lineMatcall')
+            disp(obj.trackEnd)
+            disp(obj.trackFrames)
             obj.lineMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars); %last argument used to be a 1 pre 5/14/25
+                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, obj.startDim, obj.trackEnd, obj.trackFrames); %last argument used to be a 1 pre 5/14/25
             disp('post line mat call')
             
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
