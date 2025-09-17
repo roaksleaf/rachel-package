@@ -1,8 +1,12 @@
 function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise,...
-    noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars)
+    noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames)
 
-    dimBackground = 0;
-    targetMean = lowMean;
+    dimBackground = startDim;
+    if startDim
+        targetMean = lowMean;
+    else
+        targetMean = highMean;
+    end
     noiseStream = RandStream('mt19937ar', 'Seed', seed);
     preFrames = round(60 * (preTime/1e3));
     stmFrames = round(60 * (stimTime/1e3));
@@ -12,15 +16,23 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
     for frame = 1:preFrames + stmFrames
         lineMatrix(:, frame) = backgroundIntensity;
     end
+    
+    if trackEnd
+        targetFrames = preFrames+stmFrames-trackFrames;
+    else
+        targetFrames = preFrames+stmFrames;
+    end
 
     for frame = preFrames+1:preFrames+stmFrames
         if mod(frame-preFrames, backgroundFrameDwell) == 0
-            if (dimBackground == 0)
-                dimBackground = 1;
-                targetMean = highMean;
-            else
-                dimBackground = 0;
-                targetMean = lowMean;
+            if frame <= targetFrames
+                if dimBackground
+                    dimBackground = false;
+                    targetMean = highMean;
+                else
+                    dimBackground = true;
+                    targetMean = lowMean;
+                end
             end
         end
 
