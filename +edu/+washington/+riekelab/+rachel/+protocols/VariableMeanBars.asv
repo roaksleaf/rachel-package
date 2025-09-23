@@ -1,10 +1,10 @@
 classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
-        preTime = 0 % ms
-        stimTime = 120000 % ms
+        preTime = 500 % ms
+        stimTime = 180000 % ms
         trackFrames = 3600 %on last repeat, don't do interval for this # of frames
-        tailTime = 0 % ms
+        tailTime = 500 % ms
         stixelSize = 60 % um
         binaryNoise = false 
         pairedBars = false
@@ -17,7 +17,7 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
         apertureDiameter = 0 % um
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(12) % number of epochs to queue
+        numberOfAverages = uint16(50) % number of epochs to queue
         amp % Output amplifier
         maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec
         alternateFixedSeed = false
@@ -63,27 +63,15 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
             obj.numChecksY = round(canvasSize(2) / stixelSizePix);
           
             if obj.interleave
-                deltareps = zeros(size(obj.backgroundRepEpochs));
+                deltareps = zeros(size(obj.backgroundRepEpochs);
                 minrep = min(obj.backgroundRepEpochs);
-                for i=1:length(obj.backgroundRepEpochs)
-                    deltareps(i) = obj.backgroundRepEpochs(i)-minrep;
+                for i=1:size(obj.backgroundRepEpochs)
+                    deltareps(i
                 end
-                obj.backgroundFrameDwellsFull = repmat(obj.backgroundFrameDwells, [1, minrep]);
-                while any(deltareps)
-                    for i=1:length(obj.backgroundRepEpochs)
-                        if deltareps(i)>=1
-                            obj.backgroundFrameDwellsFull = cat(2, obj.backgroundFrameDwellsFull, obj.backgroundFrameDwells(i));
-                            deltareps(i) = deltareps(i)-1;
-                        end
-                    end
-                end
-                        
             else
                 obj.backgroundFrameDwellsFull = repelem(obj.backgroundFrameDwells, obj.backgroundRepEpochs);
             end
-            disp(obj.backgroundFrameDwellsFull);
         end
-        
         
         function prepareEpoch(obj, epoch)
             fprintf(1, 'start prepare epoc\n');
