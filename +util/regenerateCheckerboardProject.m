@@ -1,4 +1,4 @@
-function [stimulus, line_mat, contrast_mat] = regenerateCheckerboardProject(exp_name, preTime, tailTime, stimTime, noiseSeeds, numChecksXs, ...
+function [stimulus, line_mat, contrast_mat] = regenerateCheckerboardProject(b_noise_only, exp_name, preTime, tailTime, stimTime, noiseSeeds, numChecksXs, ...
     backgroundIntensity, frameDwell, binaryNoise, noiseStdv, backgroundRatios, backgroundFrameDwells, pairedBars, noSplitField,...
     contrastJumps, numChecksYs)
     num_epochs = length(noiseSeeds);
@@ -10,8 +10,10 @@ function [stimulus, line_mat, contrast_mat] = regenerateCheckerboardProject(exp_
     tail_frames = round(60 * (tailTime/1e3));
     stim_frames = round(60 * (stimTime/1e3));
     num_frames = pre_frames + stim_frames + tail_frames;
-
-    stimulus = zeros(y, x, num_frames, num_epochs);
+    
+    if ~b_noise_only
+        stimulus = zeros(y, x, num_frames, num_epochs);
+    end
     line_mat = zeros(x, num_frames, num_epochs);
     contrast_mat = zeros(num_frames, num_epochs);
 
@@ -39,10 +41,14 @@ function [stimulus, line_mat, contrast_mat] = regenerateCheckerboardProject(exp_
                 contrast_mat = 0;
         end
         
-        for ii=1:num_frames
-            line = line_mat(:, ii, i);
-            frame = uint8(255 * repmat(line', numChecksY, 1));
-            stimulus(:, :, ii, i) = frame;
+        if b_noise_only
+            for ii=1:num_frames
+                line = line_mat(:, ii, i);
+                frame = uint8(255 * repmat(line', numChecksY, 1));
+                stimulus(:, :, ii, i) = frame;
+            end
+        else
+            stimulus = NaN;
         end
     
     end

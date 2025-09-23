@@ -48,7 +48,7 @@ function [lineMatrix, contrast_trace] = getCheckerboardProjectLines(seed, numChe
     maxVar = min([backgroundIntensity, 1 - backgroundIntensity]) * backgroundRatio;
     % backgroundAdjust applies the context based on backgroundRatio.
     backgroundAdjust = min([backgroundIntensity, 1 - backgroundIntensity]) - maxVar;
-    disp(backgroundAdjust)
+    % disp(backgroundAdjust)
     % eg-if backgroundIntensity = 0.7, backgroundRatio = 0.8, then
     % maxVar = 0.3 * 0.8 = 0.24 and backgroundAdjust = 0.3 - 0.24 = 0.06
 
