@@ -8,18 +8,18 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
         stixelSize = 60 % um
         binaryNoise = false 
         pairedBars = false
-        noiseStdv = 0.3 %contrast, as fraction of mean 
+        noiseStdv = 0.3 %contrast
         lowMean = 0.2
         highMean = 0.6
         frameDwell = 3 % Frames per noise update
-        backgroundFrameDwells = [1800 600 300] % Frames per noise update
-        backgroundRepEpochs = [4 4 4] %26 10 8 6  ==> 13 5 4 3  13 5 4 3 => 13 18 22 25  38 43 47 50
+        backgroundFrameDwells = [1800 600 300] % Frames per length
+        backgroundRepEpochs = [4 4 4] %repeats for each interval length
         apertureDiameter = 0 % um
         backgroundIntensity = 0.5 % (0-1)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(12) % number of epochs to queue
         amp % Output amplifier
-        maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec
+        maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec %can ignore
         alternateFixedSeed = false
         trackEndAll = true
         interleave = true 
