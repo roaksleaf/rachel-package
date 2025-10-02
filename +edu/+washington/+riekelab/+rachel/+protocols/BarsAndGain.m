@@ -51,6 +51,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
         trackDur_ms
         projStepDurations
         projGainMeans
+        projector_gain_device
     end
 
     methods
@@ -105,7 +106,8 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
                 obj.projector_gain_device = true;
             else
                 obj.projector_gain_device = false;
-                obj.projGainMeans = ones(size(obj.gainMeans));
+                obj.projGainMeans = ones(size(obj.lowMean));
+                obj.projStepDurations = ones(size(obj.lowMean));
             end
         end
         
@@ -150,15 +152,15 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             obj.highMean = obj.backgroundIntensity;
             obj.backgroundFrameDwell = 1000;
 
-            if obj.projectorGainDevice
+            if obj.projector_gain_device
                 %need to deal with gain values and step duration values
                 if obj.trackEnd
                     stimDur = obj.stimTime - obj.trackDur;
-                    obj.numSteps = ceil(stimDur/obj.stepDuration)+1;
-                    obj.projStepDurations = [repmat(obj.stepDuration, obj.numSteps) obj.trackDur];
+                    numSteps = ceil(stimDur/obj.stepDuration);
+                    obj.projStepDurations = [repmat(obj.stepDuration, 1, numSteps) obj.trackDur];
                 else 
-                    obj.numSteps = ceil(obj.stimTime/obj.stepDuration);
-                    obj.projStepDurations = [repmat(obj.stepDuration, obj.numSteps)];
+                    numSteps = ceil(obj.stimTime/obj.stepDuration);
+                    obj.projStepDurations = [repmat(obj.stepDuration, 1, numSteps)];
                 end
     
                 obj.projGainMeans = [];
@@ -177,11 +179,13 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
                     end
                 end
             end
-            disp('projector steps:',  obj.stepDurations);
-            disp('projector gains: ', obj.gainMeans);
+            disp('projector steps:');
+            disp(obj.projStepDurations);
+            disp('projector gains: ') 
+            disp(obj.projGainMeans);
 
             if obj.projector_gain_device
-                epoch.addStimulus(obj.rig.getDevice('Projector Gain'), obj.createGainStimulus(obj.projGainMeans(mean_idx)), obj.projStepDurations(mean_idx));
+                epoch.addStimulus(obj.rig.getDevice('Projector Gain'), obj.createGainStimulus(obj.projGainMeans, obj.projStepDurations));
             end
 
             %at start of epoch, set random stream
@@ -193,13 +197,13 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('startDim', obj.startDim);
             epoch.addParameter('trackEnd', obj.trackEnd);
             epoch.addParameter('lowMean', obj.lowMean);
-            epoch.addParamter('highMean', obj.highMean);
+            epoch.addParameter('highMean', obj.highMean);
             epoch.addParameter('preFrames', obj.preFrames);
             epoch.addParameter('stepFrames', obj.stepFrames);
             epoch.addParameter('trackFrames', obj.trackFrames)
             epoch.addParameter('backgroundFrameDwell', obj.backgroundFrameDwell);
-            epoch.addParameter('stepDurations', obj.stepDurations);
-            epoch.addParameter('gainMeans', obj.gainMeans)
+            epoch.addParameter('projStepDurations', obj.projStepDurations);
+            epoch.addParameter('projGainMeans', obj.projGainMeans)
             fprintf(1, 'end prepare epoc\n');
         end
 
@@ -209,7 +213,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             gen.preTime = obj.preTime;
             gen.stimTime = obj.stimTime;
             gen.tailTime = obj.tailTime;
-            gen.stepDuration = obj.step_duration_ms;
+            gen.stepDurations = step_durations;
             gen.gainValues = gain_values;
             gen.stepDurations = step_durations;
             gen.sampleRate = obj.sampleRate;

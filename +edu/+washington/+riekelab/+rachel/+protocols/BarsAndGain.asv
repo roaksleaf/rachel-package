@@ -1,29 +1,27 @@
-classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
+classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
     
     properties
-        preTime = 500 % ms
-        stimTime = 180000 % ms
-        trackFrames = 3600 %on last repeat, don't do interval for this # of frames
-        tailTime = 500 % ms
+        preTime = 0 % ms
+        stimTime = 120000 % ms
+        trackDur = 60000 %on last repeat, don't do interval for this long (ms)
+        tailTime = 0 % ms
         stixelSize = 60 % um
         binaryNoise = false 
         pairedBars = false
-        noiseStdv = 0.3 %contrast, as fraction of mean 
-        lowMean = 0.2
-        highMean = 0.6
+        noiseStdv = 0.6 %contrast
         frameDwell = 3 % Frames per noise update
-        backgroundFrameDwells = [1800 600 300] % Frames per noise update
-        backgroundRepEpochs = [4 4 4] %26 10 8 6  ==> 13 5 4 3  13 5 4 3 => 13 18 22 25  38 43 47 50
-        apertureDiameter = 0 % um
-        backgroundIntensity = 0.5 % (0-1)
-        onlineAnalysis = 'none'
-        numberOfAverages = uint16(50) % number of epochs to queue
-        amp % Output amplifier
-        maxPixelVal = 1 %for analysis only, pixel val of 1 in R*/photoreceptor/sec
+        stepDurations = [30000 10000 5000] % ms
+        durRepEpochs = [4 4 4] %repeats for each interval length
+        lowGain = 0.2 %projector gain low
+        highGain = 1.0 %projector gain high
         alternateFixedSeed = false
         trackEndAll = true
         interleave = true 
-
+        backgroundIntensity = 0.5 % (0-1)
+        numberOfAverages = uint16(12) % number of epochs to queue
+        apertureDiameter = 0 % um
+        onlineAnalysis = 'none'
+        amp % Output amplifier
     end
 
     properties (Hidden)
@@ -37,14 +35,25 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
         imageMatrix
         lineMatrix
         dimBackground
-        loadedFilter            % Loaded linear filter from .mat file
         useFixedSeed = false        % Toggle between fixed and random seeds if alternateFixedSeed = true else always false
-        backgroundFrameDwell
-        backgroundFrameDwellsFull
+        stepDuration
+        stepDurationsFull
         startDim = true
         trackEnd = false
+        lowMean
+        highMean
+        backgroundFrameDwell
+        numFrames
+        preFrames
+        stepFrames
+        step_duration_ms
+        trackFrames
+        trackDur_ms
+        projStepDurations
+        projGainMeans
+        projector_gain_device
     end
-    
+
     methods
         
         function didSetRig(obj)
@@ -63,15 +72,45 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
             obj.numChecksY = round(canvasSize(2) / stixelSizePix);
           
             if obj.interleave
-                deltareps = zeros(size(obj.backgroundRepEpochs);
-                minrep = min(obj.backgroundRepEpochs);
-                for i=1:size(obj.backgroundRepEpochs)
-                    deltareps(i
+                deltareps = zeros(size(obj.durRepEpochs));
+                minrep = min(obj.durRepEpochs);
+                for i=1:length(obj.durRepEpochs)
+                    deltareps(i) = obj.durRepEpochs(i)-minrep;
                 end
+                obj.stepDurationsFull = repmat(obj.stepDurations, [1, minrep]);
+                while any(deltareps)
+                    for i=1:length(obj.durRepEpochs)
+                        if deltareps(i)>=1
+                            obj.stepDurationsFull = cat(2, obj.stepDurationsFull, obj.stepDurations(i));
+                            deltareps(i) = deltareps(i)-1;
+                        end
+                    end
+                end
+                        
             else
-                obj.backgroundFrameDwellsFull = repelem(obj.backgroundFrameDwells, obj.backgroundRepEpochs);
+                obj.stepDurationsFull = repelem(obj.stepDurations, obj.durRepEpochs);
+            end
+            disp(obj.stepDurationsFull);
+
+            obj.numFrames = floor(obj.stimTime * 1e-3 * obj.frameRate)+15;
+            obj.preFrames = round(obj.preTime * 1e-3 * 60.0);
+            obj.stepFrames = round(obj.stepDuration * 1e-3 * 60.0);
+            obj.step_duration_ms = obj.stepFrames * 59.94;
+            
+            obj.trackFrames = round(obj.trackDur * 1e-3 * 60.0);
+            obj.trackDur_ms = obj.trackFrames * 59.94;
+
+
+            projector_gain = obj.rig.getDevices('Projector Gain');
+            if ~isempty(projector_gain)
+                obj.projector_gain_device = true;
+            else
+                obj.projector_gain_device = false;
+                obj.projGainMeans = ones(size(obj.lowMean));
+                obj.projStepDurations = ones(size(obj.lowMean));
             end
         end
+        
         
         function prepareEpoch(obj, epoch)
             fprintf(1, 'start prepare epoc\n');
@@ -95,29 +134,100 @@ classdef VariableMeanBars < manookinlab.protocols.ManookinLabStageProtocol
             obj.startDim = ~obj.startDim;
             
             %Choose next background frame dwell 
-            obj.backgroundFrameDwell = obj.backgroundFrameDwellsFull(mod(obj.numEpochsCompleted,length(obj.backgroundFrameDwellsFull))+1);
-            nextBackgroundFrameDwell = obj.backgroundFrameDwellsFull(mod(obj.numEpochsCompleted+1,length(obj.backgroundFrameDwellsFull))+1);
+            obj.stepDuration = obj.stepDurationsFull(mod(obj.numEpochsCompleted,length(obj.stepDurationsFull))+1);
+            nextStepDur = obj.stepDurationsFull(mod(obj.numEpochsCompleted+1,length(obj.stepDurationsFull))+1);
             if obj.trackEndAll
                 obj.trackEnd=true;
             else
-                if obj.backgroundFrameDwell ~= nextBackgroundFrameDwell 
+                if obj.stepDuration ~= nextStepDur 
                     obj.trackEnd=true;
                 else
                     obj.trackEnd=false;
                 end
             end
-            disp(obj.backgroundFrameDwell)
-            
+            disp(obj.stepDuration)
+
+            %util function needs these, shared with other protocol
+            obj.lowMean = obj.backgroundIntensity;
+            obj.highMean = obj.backgroundIntensity;
+            obj.backgroundFrameDwell = 1000;
+
+            if obj.projector_gain_device
+                %need to deal with gain values and step duration values
+                if obj.trackEnd
+                    stimDur = obj.stimTime - obj.trackDur;
+                    numSteps = ceil(stimDur/obj.stepDuration);
+                    obj.projStepDurations = [repmat(obj.stepDuration, 1, numSteps) obj.trackDur];
+                else 
+                    numSteps = ceil(obj.stimTime/obj.stepDuration);
+                    obj.projStepDurations = [repmat(obj.stepDuration, 1, numSteps)];
+                end
+    
+                obj.projGainMeans = [];
+                if obj.startDim
+                    target = obj.lowGain;
+                else
+                    target = obj.highGain;
+                end
+    
+                while length(obj.projGainMeans) < length(obj.projStepDurations)
+                    obj.projGainMeans = [obj.projGainMeans target];
+                    if target == obj.lowGain
+                        target = obj.highGain;
+                    else
+                        target = obj.lowGain;
+                    end
+                end
+            end
+            disp('projector steps:');
+            disp(obj.projStepDurations);
+            disp('projector gains: ') 
+            disp(obj.projGainMeans);
+
+            if obj.projector_gain_device
+                epoch.addStimulus(obj.rig.getDevice('Projector Gain'), obj.createGainStimulus(obj.projGainMeans, obj.projStepDurations);
+            end
+
             %at start of epoch, set random stream
 %             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
             epoch.addParameter('noiseSeed', obj.noiseSeed);
             epoch.addParameter('numChecksX', obj.numChecksX);
             epoch.addParameter('numChecksY', obj.numChecksY);
-            epoch.addParameter('backgroundFrameDwell', obj.backgroundFrameDwell);
+            epoch.addParameter('stepDuration', obj.stepDuration);
             epoch.addParameter('startDim', obj.startDim);
             epoch.addParameter('trackEnd', obj.trackEnd);
+            epoch.addParameter('lowMean', obj.lowMean);
+            epoch.addParamter('highMean', obj.highMean);
+            epoch.addParameter('preFrames', obj.preFrames);
+            epoch.addParameter('stepFrames', obj.stepFrames);
+            epoch.addParameter('trackFrames', obj.trackFrames)
+            epoch.addParameter('backgroundFrameDwell', obj.backgroundFrameDwell);
+            epoch.addParameter('stepDurations', obj.stepDurations);
+            epoch.addParameter('gainMeans', obj.gainMeans)
             fprintf(1, 'end prepare epoc\n');
-         end
+        end
+
+        function stim = createGainStimulus(obj, gain_values, step_durations)
+            gen = edu.washington.riekelab.stimuli.ProjectorGainGenerator();
+            
+            gen.preTime = obj.preTime;
+            gen.stimTime = obj.stimTime;
+            gen.tailTime = obj.tailTime;
+            gen.stepDurations = obj.step_duration_ms;
+            gen.gainValues = gain_values;
+            gen.stepDurations = step_durations;
+            gen.sampleRate = obj.sampleRate;
+            gen.units = obj.rig.getDevice( 'Projector Gain' ).background.displayUnits;
+            if strcmp(gen.units, symphonyui.core.Measurement.NORMALIZED)
+                gen.upperLimit = 1;
+                gen.lowerLimit = 0;
+            else
+                gen.upperLimit = 1.8;
+                gen.lowerLimit = -1.8;
+            end
+            
+            stim = gen.generate();
+        end
 
          function p = createPresentation(obj)
             fprintf(1, 'start create presentation\n');
