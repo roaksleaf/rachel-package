@@ -9,6 +9,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
         binaryNoise = false 
         pairedBars = false
         noiseStdv = 0.6 %contrast
+        noiseMean = 0.5 %pixel mean of noise stimulus
         frameDwell = 3 % Frames per noise update
         stepDurations = [30000 10000 5000] % ms
         durRepEpochs = [4 4 4] %repeats for each interval length
@@ -148,8 +149,10 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             disp(obj.stepDuration)
 
             %util function needs these, shared with other protocol
-            obj.lowMean = obj.backgroundIntensity;
-            obj.highMean = obj.backgroundIntensity;
+%             obj.lowMean = obj.backgroundIntensity;
+%             obj.highMean = obj.backgroundIntensity;
+            obj.lowMean = obj.noiseMean;
+            obj.highMean =  obj.noiseMean;
             obj.backgroundFrameDwell = 1000;
 
             if obj.projector_gain_device
