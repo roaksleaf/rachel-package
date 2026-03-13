@@ -1,5 +1,5 @@
 function [stimulus, line_mat] = regenerateVariableMeanBars(b_lines_only, exp_name, noiseSeeds, numChecksXs, preTime, stimTime, tailTime, ...
-    backgroundIntensity, frameDwell, binaryNoise, noiseStdv, lowMeans, backgroundFrameDwells, pairedBars, startDims, trackEnds, trackFrames,...
+    backgroundIntensity, frameDwell, binaryNoise, noiseStdv, lowMeans, highMeans, backgroundFrameDwells, pairedBars, startDims, trackEnds, trackFrames,...
     numChecksYs)
     num_epochs = length(noiseSeeds);
     
@@ -14,6 +14,7 @@ function [stimulus, line_mat] = regenerateVariableMeanBars(b_lines_only, exp_nam
     if ~b_lines_only
         stimulus = zeros(y, x, num_frames, num_epochs);
     end
+    
     line_mat = zeros(x, num_frames, num_epochs);
 
     for i=1:num_epochs
