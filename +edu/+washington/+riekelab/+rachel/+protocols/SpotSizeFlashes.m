@@ -8,23 +8,24 @@ classdef SpotSizeFlashes < manookinlab.protocols.ManookinLabStageProtocol
         tailTime = 2000                 % Spot trailing duration (ms)
         incrementIntensity = 1.0        % increment light intensity (0-1) 
         backgroundIntensity = 0.5       % Background intensity (0-1) 
-        decrementIntensity = 0            %Intensity of decrements 
-        spotDiameters = [300 600 900 1200]              % Spot diameter sizes (um)
+        decrementIntensity = 0            %Intensity of decrements (0-1)
+        spotDiameters = [300 600 900 1200 1500 1800]              % Spot diameter sizes (um)
         psth=true
         repsPerCondition = 20           % How many times to repeat each condition? (int)
-        %numberOfAverages = uint16(320)    % Number of epochs (len(spotDiameters)) * (2) * (2) * (repsPerCond)
-        interpulseInterval = 0.5          % Duration between spots (s)
+        numberOfAverages = uint16(320)    % Number of epochs (len(spotDiameters)) * (2) * (2) * (repsPerCond)
+        xOffset = 0                      %offset in X away from center (pix)
+        yOffset = 0                     % offset in Y away from center (pix)
+        %interpulseInterval = 0.5          % Duration between spots (s)
         
     end
     
     properties (Hidden)
         ampType
-        numberOfAverages
         uniqueConditions
         epochOrder
         currentCondition
-        spotDiamaterUm
-        spotDiamaterPix
+        spotDiameterUm
+        spotDiameterPix
         annulusBool
         incrementBool
     end
@@ -68,11 +69,11 @@ classdef SpotSizeFlashes < manookinlab.protocols.ManookinLabStageProtocol
                 end
             end
 
-            repeated = repmat(obj.unique_conditions, 1, obj.repsPerCondition);
+            repeated = repmat(obj.uniqueConditions, 1, obj.repsPerCondition);
             obj.epochOrder = repeated(randperm(length(repeated)));
-            
-            obj.numberOfAverages = length(obj.epochOrder);
-            obj.showFigure('manookinlab.figures.ProgressFigure', obj.numberOfAverages);
+%             disp(obj.epochOrder);
+%             obj.numberOfAverages = length(obj.epochOrder);
+%             obj.showFigure('manookinlab.figures.ProgressFigure', obj.numberOfAverages);
 
 
         end
@@ -102,16 +103,20 @@ classdef SpotSizeFlashes < manookinlab.protocols.ManookinLabStageProtocol
             spot.color = spotInt;
             spot.radiusX = obj.spotDiameterPix/2;
             spot.radiusY = obj.spotDiameterPix/2;
-            spot.position = canvasSize/2;
+            spot.position = (canvasSize/2) - [obj.xOffset, obj.yOffset];
 
             annulus = stage.builtin.stimuli.Ellipse();
             annulus.color = annulusInt;
             annulus.radiusX = spot.radiusX * 2;
             annulus.radiusY = spot.radiusY * 2;
-            annulus.position = spot.position;
+            annulus.position = spot.position; 
 
             p.addStimulus(annulus);
             p.addStimulus(spot);
+            
+           annulusVisible = stage.builtin.controllers.PropertyController(annulus, 'visible', ...
+                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+            p.addController(annulusVisible);
             
             spotVisible = stage.builtin.controllers.PropertyController(spot, 'visible', ...
                 @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
@@ -120,13 +125,13 @@ classdef SpotSizeFlashes < manookinlab.protocols.ManookinLabStageProtocol
         
         function prepareEpoch(obj, epoch)
             prepareEpoch@manookinlab.protocols.ManookinLabStageProtocol(obj, epoch);
-            obj.currentCondition = obj.epochOrder(epoch);
-
+            obj.currentCondition = obj.epochOrder{obj.numEpochsCompleted+1};
+            disp(obj.currentCondition);
             
             condition_parts = strsplit(obj.currentCondition, '_'); %spot size, annulus bool, increment bool
 
             obj.spotDiameterUm = str2double(condition_parts{1});
-            obj.spotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.spotDiameter);
+            obj.spotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.spotDiameterUm);
             obj.annulusBool = str2double(condition_parts{2});
             obj.incrementBool = str2double(condition_parts{3});
 
