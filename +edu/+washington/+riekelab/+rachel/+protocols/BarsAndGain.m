@@ -188,6 +188,8 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
                 epoch.addStimulus(obj.rig.getDevice('Projector Gain'), obj.createGainStimulus(obj.projGainMeans, obj.projStepDurations));
             end
 
+            units = obj.rig.getDevice( 'Projector Gain' ).background.displayUnits;
+
             %at start of epoch, set random stream
 %             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
             epoch.addParameter('noiseSeed', obj.noiseSeed);
@@ -204,6 +206,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('backgroundFrameDwell', obj.backgroundFrameDwell);
             epoch.addParameter('projStepDurations', obj.projStepDurations);
             epoch.addParameter('projGainMeans', obj.projGainMeans)
+            epoch.addParameter('projUnits', units);
             fprintf(1, 'end prepare epoc\n');
         end
 
