@@ -159,7 +159,12 @@ classdef BarsAndGainStepSweep < manookinlab.protocols.ManookinLabStageProtocol
             end
 
             % Last gain value after the alternating steps
-            lastGain = gainSeq(end);
+%             lastGain = gainSeq(end);
+            if gainSeq(end) == obj.lowGain
+                lastGain = obj.highGain;
+            elseif gainSeq(end) == obj.highGain
+                lastGain = obj.lowGain;
+            end
 
             % Rest-of-stim duration
             stepsTotalDur_ms = nSteps * stepDur_ms;
