@@ -1,10 +1,10 @@
 classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
 
      properties
-            preTime = 0 % ms
+            preTime = 200 % ms
             stimTime = 120000 % ms
             trackDur = 60000 %on last repeat, don't do interval for this long (ms)
-            tailTime = 0 % ms
+            tailTime = 200 % ms
             stixelSize = 90 % um
             binaryNoise = false 
             pairedBars = false
@@ -18,7 +18,7 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             endGain = 0.1
             interleave = true 
             backgroundIntensity = 0.5 % (0-1)
-            numberOfAverages = uint16(12) % number of epochs to queue
+            numberOfAverages = uint16(36) % number of epochs to queue
             apertureDiameter = 0 % um
             onlineAnalysis = 'none'
             amp % Output amplifier
@@ -54,6 +54,8 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
         projStepDurations
         projGainMeans
         projector_gain_device
+        trackEnd
+        startDim
      end
 
       methods
@@ -92,10 +94,10 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             else
                 obj.stepDurationsFull = repelem(obj.stepDurations, obj.durRepEpochs);
             end
-            disp(obj.stepDurationsFull);
             obj.allEpochConditions = repelem(obj.stepDurationsFull, 3);
+            disp(obj.allEpochConditions)
             initGainVector = [obj.lowGain, obj.highGain, obj.endGain];
-            obj.initGainAll = repmat(initGainVector, 1, size(obj.stepDurationsFull));
+            obj.initGainAll = repmat(initGainVector, [1, length(obj.stepDurationsFull)]);
             disp(obj.initGainAll);
 
             obj.numFrames = floor(obj.stimTime * 1e-3 * obj.frameRate)+15;
@@ -128,6 +130,10 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             disp(obj.stepDuration)
 
             obj.initGain = obj.initGainAll(mod(obj.numEpochsCompleted,length(obj.initGainAll))+1);
+            
+            disp('lengths of vectors:') 
+            disp(length(obj.allEpochConditions)) 
+            disp(length(obj.initGainAll));
 
             %util function needs these, shared with other protocol
             obj.lowMean = obj.noiseMean;
@@ -142,12 +148,13 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
     
                 obj.projGainMeans = [];
                 target = obj.initGain;
+                disp(obj.initGain);
     
                 while length(obj.projGainMeans) < length(obj.projStepDurations)
                     obj.projGainMeans = [obj.projGainMeans target];
                     if target == obj.lowGain
                         target = obj.highGain;
-                    else
+                    elseif target == obj.highGain
                         target = obj.lowGain;
                     end
                 end
@@ -159,12 +166,13 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
                 
                 %this is a helpful param to have innately for analysis
                 if obj.projGainMeans(end-1) == obj.lowGain
-                    obj.polarityType = increment;
+                    obj.polarityType = 'increment';
                 elseif obj.projGainMeans(end-1) == obj.highGain
-                    obj.polarityType = decrement;
+                    obj.polarityType = 'decrement';
                 elseif obj.projGainMeans(end-1) == obj.endGain
-                    obj.polarityType = none;
+                    obj.polarityType = 'none';
                 end
+                disp(obj.polarityType);
 
             end
             disp('projector steps:');
@@ -177,6 +185,8 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             end
 
             units = obj.rig.getDevice( 'Projector Gain' ).background.displayUnits;
+            obj.trackEnd=true;
+            obj.startDim=true;
 
             %at start of epoch, set random stream
 %             obj.noiseStream = RandStream('mt19937ar', 'Seed', obj.noiseSeed);
@@ -194,7 +204,8 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('projStepDurations', obj.projStepDurations);
             epoch.addParameter('projGainMeans', obj.projGainMeans)
             epoch.addParameter('projUnits', units);
-            epoch.addParamter('polarityType', obj.polarityType);
+           	epoch.addParameter('trackEnd', obj.trackEnd);
+            epoch.addParameter('startDim', obj.startDim);
             fprintf(1, 'end prepare epoc\n');
         end
 
@@ -241,7 +252,6 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             p.addStimulus(board);
 
             disp('pre lineMatcall')
-            disp(obj.trackEnd)
             disp(obj.trackFrames)
             obj.lineMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
                 obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, obj.startDim, obj.trackEnd, obj.trackFrames); %last argument used to be a 1 pre 5/14/25
@@ -290,4 +300,4 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
     end
     
 end
-end
+
