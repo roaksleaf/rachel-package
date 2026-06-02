@@ -110,9 +110,8 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             obj.initGainAll = obj.initGainAll(:, shuffledIdx);
             obj.initGainAll = obj.initGainAll(:)';
             
-            newShuffle = randperm(length(obj.initGainAll));
-            obj.initGainAll = obj.initGainAll(newShuffle);         
-            obj.allEpochConditions=obj.allEpochConditions(newShuffle);
+            newShuffle = randPerm(length(obj.initGainAll);
+            obj.initGain
             
             disp(obj.initGainAll)
             disp(obj.allEpochConditions)
