@@ -36,6 +36,7 @@ classdef BarsAndGainStepSweep < manookinlab.protocols.ManookinLabStageProtocol
         useFixedSeed = false
         startDim = true
         conditionOrder          % full interleaved/blocked sequence of condition indices
+        initGainAll
         currentConditionIdx     % index into numStepsPerCondition for this epoch
         projStepDurations       % step duration array for ProjectorGainGenerator
         projGainMeans           % gain value array for ProjectorGainGenerator
@@ -88,8 +89,17 @@ classdef BarsAndGainStepSweep < manookinlab.protocols.ManookinLabStageProtocol
                 % Blocked: all repeats of condition 1, then condition 2, etc.
                 obj.conditionOrder = repelem(1:numConditions, obj.numRepeatsPerCondition);
             end
-            disp('Condition order:');
+
+
+            nEpochs = length(obj.conditionOrder);
+            initGainVector = repmat([obj.lowGain, obj.highGain], [1, ceil(nEpochs/2)]);
+            initGainVector = initGainVector(1:nEpochs);  % trim to exact length
+            
+            newShuffle = randperm(nEpochs);
+            obj.conditionOrder = obj.conditionOrder(newShuffle);
+            obj.initGainAll = initGainVector(newShuffle);
             disp(obj.conditionOrder);
+            disp(obj.initGainAll);
 
             % Precompute frame counts
             obj.numFrames   = floor(obj.stimTime * 1e-3 * obj.frameRate) + 15;
@@ -126,12 +136,23 @@ classdef BarsAndGainStepSweep < manookinlab.protocols.ManookinLabStageProtocol
             end
 
             % --- Alternate startDim each epoch ---
-            obj.startDim = ~obj.startDim;
+            % obj.startDim = ~obj.startDim;
+                        % obj.startDim = ~obj.startDim;
+
+
 
             % --- Select condition for this epoch ---
             epochIdx = mod(obj.numEpochsCompleted, length(obj.conditionOrder)) + 1;
             obj.currentConditionIdx = obj.conditionOrder(epochIdx);
             nSteps = obj.numStepsPerCondition(obj.currentConditionIdx);
+
+            initGain = obj.initGainAll(epochIdx);
+
+            if initGain == obj.lowGain
+                obj.startDim=1;
+            elseif initGain == obj.highGain
+                obj.startDim=0;
+            end
 
             % --- Build projector gain trace ---
             % Structure: [nSteps x stepDuration_ms] then [rest of stim at last gain]
@@ -207,6 +228,8 @@ classdef BarsAndGainStepSweep < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('highMean',              obj.highMean);
             epoch.addParameter('preFrames',             obj.preFrames);
             epoch.addParameter('backgroundFrameDwell',  obj.backgroundFrameDwell);
+            epoch.addParameter('allConditionOrders', obj.conditionOrder);
+            epoch.addParameter('initGainFull', obj.initGainAll);
 
             if obj.projector_gain_device
                 units = obj.rig.getDevice('Projector Gain').background.displayUnits;

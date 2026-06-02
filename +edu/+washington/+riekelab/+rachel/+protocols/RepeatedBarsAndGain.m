@@ -224,6 +224,8 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
            	epoch.addParameter('trackEnd', obj.trackEnd);
             epoch.addParameter('startDim', obj.startDim);
             epoch.addParameter('polarityType', obj.polarityType);
+            epoch.addParameter('allEpochConditions', obj.allEpochConditions);
+            epoch.addParameter('initGainFull', obj.initGainAll);
 
             fprintf(1, 'end prepare epoc\n');
         end

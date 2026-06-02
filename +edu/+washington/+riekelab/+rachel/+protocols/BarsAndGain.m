@@ -17,6 +17,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
         highGain = 1.0 %projector gain high
         alternateFixedSeed = false
         trackEndAll = true
+        randomize_order = true %overrides interleave
         interleave = true 
         backgroundIntensity = 0.5 % (0-1)
         numberOfAverages = uint16(12) % number of epochs to queue
@@ -44,6 +45,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
         lowMean
         highMean
         backgroundFrameDwell
+        initGainAll
         numFrames
         preFrames
         stepFrames
@@ -91,7 +93,22 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             else
                 obj.stepDurationsFull = repelem(obj.stepDurations, obj.durRepEpochs);
             end
+
+            nEpochs = length(obj.stepDurationsFull);
+            initGainVector = repmat([obj.lowGain, obj.highGain], [1, ceil(nEpochs/2)]);
+            initGainVector = initGainVector(1:nEpochs);  % trim to exact length
+            
+            if obj.randomize_order
+                % Shuffle both together
+                newShuffle = randperm(nEpochs);
+                obj.stepDurationsFull = obj.stepDurationsFull(newShuffle);
+                obj.initGainAll = initGainVector(newShuffle);
+            end
+
             disp(obj.stepDurationsFull);
+            disp(obj.initGainAll);
+
+
 
             obj.numFrames = floor(obj.stimTime * 1e-3 * obj.frameRate)+15;
             obj.preFrames = round(obj.preTime * 1e-3 * 60.0);
@@ -132,7 +149,18 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
                 obj.useFixedSeed = ~obj.useFixedSeed;
             end
             
-            obj.startDim = ~obj.startDim;
+            % obj.startDim = ~obj.startDim;
+
+            epochIdx = mod(obj.numEpochsCompleted, length(obj.stepDurationsFull)) + 1;
+            obj.stepDuration = obj.stepDurationsFull(epochIdx);
+            initGain = obj.initGainAll(epochIdx);
+
+            if initGain == obj.lowGain
+                obj.startDim=1;
+            elseif initGain == obj.highGain
+                obj.startDim=0;
+            end
+
             
             %Choose next background frame dwell 
             obj.stepDuration = obj.stepDurationsFull(mod(obj.numEpochsCompleted,length(obj.stepDurationsFull))+1);
@@ -210,6 +238,8 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('projStepDurations', obj.projStepDurations);
             epoch.addParameter('projGainMeans', obj.projGainMeans)
             epoch.addParameter('projUnits', units);
+            epoch.addParameter('stepDurationsFull', obj.stepDurationsFull);
+            epoch.addParameter('initGainFull', obj.initGainAll);
             fprintf(1, 'end prepare epoc\n');
         end
 
