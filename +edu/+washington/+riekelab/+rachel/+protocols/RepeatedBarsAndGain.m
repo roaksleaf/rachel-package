@@ -48,6 +48,8 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
         backgroundFrameDwell
         numFrames
         preFrames
+        tailFrames
+        stimFrames
         stepFrames
         step_duration_ms
         trackFrames
@@ -120,6 +122,8 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
 
             obj.numFrames = floor(obj.stimTime * 1e-3 * obj.frameRate)+15;
             obj.preFrames = round(obj.preTime * 1e-3 * 60.0);
+            obj.tailFrames = round(obj.tailTime * 1e-3 * 60.0);
+            obj.stimFrames = round(obj.stimTime * 1e-3 * 60.0);
             obj.stepFrames = round(obj.stepDuration * 1e-3 * 60.0);
             obj.step_duration_ms = obj.stepFrames * 59.94;
             
@@ -197,7 +201,7 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
 
             %need to add in pre and tail time steps
             obj.projStepDurations = [obj.preTime, obj.projStepDurations, obj.tailTime];
-            obj.projGainValues = [1, obj.projGainValues, 1];
+            obj.projGainMeans = [1, obj.projGainMeans, 1];
 
             disp('projector steps:');
             disp(obj.projStepDurations);
@@ -288,19 +292,26 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
                       obj.backgroundIntensity, obj.frameDwell, obj.binaryNoise, obj.noiseStdv, ...
                       obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, ...
                       obj.startDim, obj.trackEnd, 0);
+                  disp('made segmatrix');
                     
                 % Tile to fill stmFrames
                    segFrames = size(segMatrix, 2);
-                   nFull     = floor(stmFrames / segFrames);
-                   leftover  = mod(stmFrames, segFrames);
+                   disp(segFrames);
+                   nFull     = floor(obj.stimFrames / segFrames);
+                   leftover  = mod(obj.stimFrames, segFrames);
                    stimPart  = [repmat(segMatrix, 1, nFull), segMatrix(:, 1:leftover)];
+                   
+                   disp('stimpart shape');
+                   disp(size(stimPart));
+                   disp(size(repmat(obj.backgroundIntensity, obj.numChecksX, obj.preFrames)));
 
                    % Assemble full matrix with pre/tail background
                    obj.lineMatrix = [
-                       repmat(obj.backgroundIntensity, obj.numChecksX, preFrames), ...
+                       repmat(obj.backgroundIntensity, obj.numChecksX, obj.preFrames), ...
                        stimPart, ...
-                       repmat(obj.backgroundIntensity, obj.numChecksX, tailFrames)
+                       repmat(obj.backgroundIntensity, obj.numChecksX, obj.tailFrames)
                    ];
+                disp('created linemat');
             else
                    disp(obj.trackFrames)
                    obj.lineMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
@@ -309,7 +320,7 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             end
 
             %obj.lineMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, obj.startDim, obj.trackEnd, obj.trackFrames); %last argument used to be a 1 pre 5/14/25
+%                 obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, obj.startDim, obj.trackEnd, obj.trackFrames); %last argument used to be a 1 pre 5/14/25
             
 
             disp('post line mat call')
@@ -338,7 +349,7 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             function i = getNewBoard(obj, frame)
                 line = obj.lineMatrix(:, frame);
                 i = uint8(255 * repmat(line', obj.numChecksY, 1));
-                size(i)
+%                 size(i)
             end
             
         end

@@ -213,7 +213,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             
             %need to add in pre and tail time steps
             obj.projStepDurations = [obj.preTime, obj.projStepDurations, obj.tailTime];
-            obj.projGainValues = [1, obj.projGainValues, 1];
+            obj.projGainMeans = [1, obj.projGainMeans, 1];
 
             disp('projector steps:');
             disp(obj.projStepDurations);
@@ -321,7 +321,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             function i = getNewBoard(obj, frame)
                 line = obj.lineMatrix(:, frame);
                 i = uint8(255 * repmat(line', obj.numChecksY, 1));
-                size(i)
+%                 size(i)
             end
             
         end
