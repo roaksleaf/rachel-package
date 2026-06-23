@@ -1,6 +1,7 @@
 function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise,...
     noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames)
 
+
     dimBackground = startDim;
     if startDim
         targetMean = lowMean;

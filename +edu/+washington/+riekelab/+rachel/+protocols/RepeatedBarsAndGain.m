@@ -13,6 +13,7 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             frameDwell = 3 % Frames per noise update
             stepDurations = [60000 20000 5000] % ms
             durRepEpochs = [4 4 4] %repeats for each interval length
+            repeatSegmentDur = 0  % ms; if >0, generate this many ms of noise and repeat it to fill stimTime
             lowGain = 0.01 %projector gain low
             highGain = 1.0 %projector gain high
             endGain = 0.1
@@ -215,6 +216,7 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('polarityType', obj.polarityType);
             epoch.addParameter('allEpochConditions', obj.allEpochConditions);
             epoch.addParameter('initGainFull', obj.initGainAll);
+            epoch.addParameter('repeatSegmentDur', obj.repeatSegmentDur);
 
             fprintf(1, 'end prepare epoc\n');
         end
@@ -263,8 +265,36 @@ classdef RepeatedBarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
 
             disp('pre lineMatcall')
             disp(obj.trackFrames)
-            obj.lineMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
+            if obj.repeatSegmentDur > 0
+                  % Generate just the segment (no pre/tail padding from util)
+                  segMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, 0, obj.repeatSegmentDur, 0, ...
+                      obj.backgroundIntensity, obj.frameDwell, obj.binaryNoise, obj.noiseStdv, ...
+                      obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, ...
+                      obj.startDim, obj.trackEnd, 0);
+                    
+                % Tile to fill stmFrames
+                   segFrames = size(segMatrix, 2);
+                   nFull     = floor(stmFrames / segFrames);
+                   leftover  = mod(stmFrames, segFrames);
+                   stimPart  = [repmat(segMatrix, 1, nFull), segMatrix(:, 1:leftover)];
+
+                   % Assemble full matrix with pre/tail background
+                   obj.lineMatrix = [
+                       repmat(obj.backgroundIntensity, obj.numChecksX, preFrames), ...
+                       stimPart, ...
+                       repmat(obj.backgroundIntensity, obj.numChecksX, tailFrames)
+                   ];
+            else
+                   disp(obj.trackFrames)
+                   obj.lineMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
+                       obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, obj.startDim, obj.trackEnd, obj.trackFrames);
+
+            end
+
+            %obj.lineMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
                 obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, obj.startDim, obj.trackEnd, obj.trackFrames); %last argument used to be a 1 pre 5/14/25
+            
+
             disp('post line mat call')
             
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...
