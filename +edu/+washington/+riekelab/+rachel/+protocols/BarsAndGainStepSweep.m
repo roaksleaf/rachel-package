@@ -201,6 +201,12 @@ classdef BarsAndGainStepSweep < manookinlab.protocols.ManookinLabStageProtocol
                 obj.projGainMeans     = [gainSeq, lastGain];
             end
 
+
+            %need to add in pre and tail time steps
+            obj.projStepDurations = [obj.preTime, obj.projStepDurations, obj.tailTime];
+            obj.projGainValues = [1, obj.projGainValues, 1];
+
+
             disp('Condition (num steps):');
             disp(nSteps);
             disp('projStepDurations:');

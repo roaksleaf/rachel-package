@@ -210,6 +210,11 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
                     end
                 end
             end
+            
+            %need to add in pre and tail time steps
+            obj.projStepDurations = [obj.preTime, obj.projStepDurations, obj.tailTime];
+            obj.projGainValues = [1, obj.projGainValues, 1];
+
             disp('projector steps:');
             disp(obj.projStepDurations);
             disp('projector gains: ') 
