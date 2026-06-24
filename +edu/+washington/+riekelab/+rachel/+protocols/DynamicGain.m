@@ -51,10 +51,10 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
         numChecksY
         stepDuration
         scaledLines
+        polarityType
         initGain
         startDim = true
         trackEnd = false
-        polarityType = 'none'
         durationsPerEpoch
         gainsPerEpoch
         preFrames
@@ -108,6 +108,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
                 obj.projStepDurations = 1;
             else
                 obj.projector_gain_device = true;
+                disp('using projector');
             end
         end
 
@@ -166,10 +167,11 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('stepDurationsFull', obj.durationsPerEpoch);
             epoch.addParameter('initGainFull', obj.gainsPerEpoch);
             epoch.addParameter('repeatSegmentDur', obj.repeatSegmentDur);
+            epoch.addParameter('polarityType', obj.polarityType);
 
             % Mode-specific parameters.
             if strcmp(obj.mode, 'repeated')
-                epoch.addParameter('polarityType', obj.polarityType);
+                
                 epoch.addParameter('allEpochConditions', obj.durationsPerEpoch);
             end
             disp('end of prepare epoch')
@@ -218,7 +220,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
             % Pre-scale to uint8 once and capture as closure locals so the per-frame
             % callback does no arithmetic, no obj.* access and no console I/O.
 %             obj.scaledLines = uint8(255 * lineMatrix);
-            obj.nFrames     = size(obj.scaledLines, 2);
+            obj.nFrames     = size(obj.lineMatrix, 2);
             disp('scaled')
            % Create checkerboard
            
@@ -232,7 +234,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
             p.addStimulus(board);
             
             boardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix', ...
-                @(state)getBoardFrame(state.frame + 1));
+                @(state)getBoardFrame(obj, state.frame + 1));
             p.addController(boardController);
             
             disp('board controller');
@@ -323,7 +325,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
                 if gains(end) == obj.highGain
                     obj.polarityType = 'increment';
                 elseif gains(end) == obj.lowGain
-                    obj.poalrityType = 'decrement';
+                    obj.polarityType = 'decrement';
                 end
 
             end
