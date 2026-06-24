@@ -61,6 +61,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
         stepFrames
         trackFrames
         nFrames
+        lineMatrix
         projStepDurations
         projGainMeans
         projector_gain_device
@@ -211,7 +212,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
 
             % Build the flickering-bar sequence once (during prep, not under the frame clock).
             disp('before bar matrix');
-            lineMatrix = obj.buildBarMatrix();
+            obj.lineMatrix = obj.buildBarMatrix();
             disp('after bar matrix');
 
             % Pre-scale to uint8 once and capture as closure locals so the per-frame
@@ -219,16 +220,17 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
 %             obj.scaledLines = uint8(255 * lineMatrix);
             obj.nFrames     = size(obj.scaledLines, 2);
             disp('scaled')
-
-            board = stage.builtin.stimuli.Image(repmat(obj.scaledLines(:,1)', obj.numChecksY, 1));
-            disp('board');
+           % Create checkerboard
+           
+            initMatrix = uint8(255.*(obj.backgroundIntensity .* ones(obj.numChecksY,obj.numChecksX)));
+            board = stage.builtin.stimuli.Image(initMatrix);
             board.size = canvasSize;
-            board.position = canvasSize / 2;
-            board.setMinFunction(GL.NEAREST);   % don't interpolate when scaling up
+            board.position = canvasSize/2;
+            board.position = board.position;
+            board.setMinFunction(GL.NEAREST); %don't interpolate to scale up board
             board.setMagFunction(GL.NEAREST);
             p.addStimulus(board);
             
-
             boardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix', ...
                 @(state)getBoardFrame(state.frame + 1));
             p.addController(boardController);
