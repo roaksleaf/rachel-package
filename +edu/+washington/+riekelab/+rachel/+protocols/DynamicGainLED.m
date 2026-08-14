@@ -75,7 +75,6 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         
         %when is this function called? 
         function p = getPreview(obj, panel)
-            disp('getpreview')
             p = symphonyui.builtin.previews.StimuliPreview(panel, @()createPreviewStimuli(obj));
             function s = createPreviewStimuli(obj)
                 s = cell(1, obj.numberOfAverages);
@@ -92,19 +91,19 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
-            
+            % 
             % if numel(obj.rig.getDeviceNames('Amp')) < 2
             %     obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             %     obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp), ...
-            %         'groupBy', {'stepDuration'});
+            %         'groupBy', {'stdv'});
             %     obj.showFigure('symphonyui.builtin.figures.ResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, ...
             %         'baselineRegion', [0 obj.stimTime], ...
             %         'measurementRegion', [0 obj.stimTime]);
             % else
             %     obj.showFigure('edu.washington.riekelab.figures.DualResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2));
             %     obj.showFigure('edu.washington.riekelab.figures.DualMeanResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2), ...
-            %         'groupBy1', {'stepDuration'}, ...
-            %         'groupBy2', {'stepDuration'}); %should this be group by step duration? 
+            %         'groupBy1', {'stdv'}, ...
+            %         'groupBy2', {'stdv'}); %should this be group by step duration? 
             %     obj.showFigure('edu.washington.riekelab.figures.DualResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, obj.rig.getDevice(obj.amp2), {@mean, @var}, ...
             %         'baselineRegion1', [0 obj.stimTime], ...
             %         'measurementRegion1', [0 obj.stimTime], ...
