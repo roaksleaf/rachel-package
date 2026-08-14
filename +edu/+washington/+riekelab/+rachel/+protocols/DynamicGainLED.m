@@ -193,6 +193,8 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                     target = obj.lowMean;
                 end
             end
+            disp('means')
+            disp(means)
 
             % 'repeated' mode: force the tracking window to endMean and record polarity.
             if strcmp(obj.mode, 'repeated')
@@ -249,6 +251,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         end
         
         function prepareEpoch(obj, epoch)
+            disp('prepare Epoch')
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, epoch);
             
             persistent seed;
