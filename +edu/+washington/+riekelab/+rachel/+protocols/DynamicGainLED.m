@@ -127,6 +127,10 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
             obj.durationsPerEpoch = durs;
             obj.meansPerEpoch     = means;
+            disp('durs per epoch')
+            disp(obj.durationsPerEpoch)
+            disp('means per epoch')
+            disp(obj.meansPerEpoch)
 
         end
 
@@ -238,7 +242,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                 gen.lowerLimit = -10.24;
             end
             
-            stim = gen.generateStimulus();
+            stim = gen.generate();
             disp('stim size 3')
             disp(size(stim))
         end
