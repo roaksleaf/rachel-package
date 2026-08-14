@@ -176,7 +176,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             end
         end
 
-        function means = assignmeans(obj, stepDurs, initMean)
+        function means = assignMeans(obj, stepDurs, initMean)
             % Alternate low/high from initmean. If initmean is neither low nor high
             % (e.g. endMean), the trace stays constant at initmean.
             means  = zeros(1, numel(stepDurs));
