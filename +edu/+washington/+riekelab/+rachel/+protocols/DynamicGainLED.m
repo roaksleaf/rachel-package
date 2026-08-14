@@ -238,7 +238,9 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                 gen.lowerLimit = -10.24;
             end
             
-            stim = gen.generate();
+            stim = gen.generateStimulus();
+            disp('stim size 3')
+            disp(size(stim))
         end
         
         function prepareEpoch(obj, epoch)
