@@ -16,6 +16,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         led                             % Output LED
         stimTime = 120000               % Noise duration (ms)
         stepDurations = [60000 20000 2000] %duration of stepwise noise changes (ms)
+        durRepEpochs = [6 6 6]
         trackDur = 60000                % duration of tracking period following final mean change (ms)
         frequencyCutoff = 60            % Noise frequency cutoff for smoothing (Hz)
         numberOfFilters = 4             % Number of filters in cascade for noise smoothing
