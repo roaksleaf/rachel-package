@@ -245,6 +245,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             stim = gen.generate();
             disp('stim size 3')
             disp(size(stim))
+            disp(stim)
         end
         
         function prepareEpoch(obj, epoch)
