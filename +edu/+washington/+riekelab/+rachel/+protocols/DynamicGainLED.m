@@ -268,8 +268,10 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             stim = obj.createLedStimulus(obj.contrast, obj.epochMeans, obj.epochStepDurations, seed);
             disp('stim created, size = ', size(stim))
 
-            disp('epoch step durations', obj.epochStepDurations)
-            disp('polarity type,', obj.polarityType)
+            disp('epoch step durations')
+            disp(obj.epochStepDurations)
+            disp('polarity type,')
+            disp(obj.polarityType)
             
             epoch.addParameter('contrast', obj.contrast);
             epoch.addParameter('epochStepDurations', obj.epochStepDurations)
