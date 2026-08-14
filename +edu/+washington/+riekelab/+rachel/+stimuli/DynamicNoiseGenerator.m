@@ -43,7 +43,13 @@ classdef DynamicNoiseGenerator < symphonyui.core.StimulusGenerator
             stimPts = timeToPts(obj.stimTime);
             tailPts = timeToPts(obj.tailTime);
             stepPts = timeToPts(obj.stepDurations); 
-            
+
+            disp('step Pts 1')
+            dsip(stepPts)
+            stepPts = round(stepPts);
+            stepPts(end) = stimPts - sum(stepPts(1:end-1));
+            disp('step Pts 2')
+            dsip(stepPts)
             % Initialize random number generator.
             stream = RandStream('mt19937ar', 'Seed', obj.seed);
             

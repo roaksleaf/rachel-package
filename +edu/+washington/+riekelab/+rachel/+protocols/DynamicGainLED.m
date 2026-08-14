@@ -16,7 +16,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         led                             % Output LED
         stimTime = 120000               % Noise duration (ms)
         stepDurations = [60000 20000 2000] %duration of stepwise noise changes (ms)
-        durRepEpochs = [6 6 6]
+        durRepEpochs = [4 4 4]
         trackDur = 60000                % duration of tracking period following final mean change (ms)
         frequencyCutoff = 60            % Noise frequency cutoff for smoothing (Hz)
         numberOfFilters = 4             % Number of filters in cascade for noise smoothing
@@ -30,6 +30,8 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         highMean = 1                   % LED background mean (high) (V or norm. [0-1] depending on LED units)
         endMean = 0.1                   %LED Background mean (end)
         amp                             % Input amplifier
+        numberOfAverages = uint16(36)    % Number of families
+
     end
     
     properties (Dependent, SetAccess = private)
@@ -37,7 +39,6 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
     end
     
     properties
-        numberOfAverages = uint16(5)    % Number of families
         interpulseInterval = 0          % Duration between noise stimuli (s)
     end
     
@@ -74,6 +75,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         
         %when is this function called? 
         function p = getPreview(obj, panel)
+            disp('getpreview')
             p = symphonyui.builtin.previews.StimuliPreview(panel, @()createPreviewStimuli(obj));
             function s = createPreviewStimuli(obj)
                 s = cell(1, obj.numberOfAverages);
@@ -91,24 +93,24 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
             
-            if numel(obj.rig.getDeviceNames('Amp')) < 2
-                obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-                obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp), ...
-                    'groupBy', {'stdv'});
-                obj.showFigure('symphonyui.builtin.figures.ResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, ...
-                    'baselineRegion', [0 obj.stimTime], ...
-                    'measurementRegion', [0 obj.stimTime]);
-            else
-                obj.showFigure('edu.washington.riekelab.figures.DualResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2));
-                obj.showFigure('edu.washington.riekelab.figures.DualMeanResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2), ...
-                    'groupBy1', {'stdv'}, ...
-                    'groupBy2', {'stdv'}); %should this be group by step duration? 
-                obj.showFigure('edu.washington.riekelab.figures.DualResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, obj.rig.getDevice(obj.amp2), {@mean, @var}, ...
-                    'baselineRegion1', [0 obj.stimTime], ...
-                    'measurementRegion1', [0 obj.stimTime], ...
-                    'baselineRegion2', [0 obj.stimTime], ...
-                    'measurementRegion2', [0 obj.stimTime]);
-            end
+            % if numel(obj.rig.getDeviceNames('Amp')) < 2
+            %     obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
+            %     obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp), ...
+            %         'groupBy', {'stepDuration'});
+            %     obj.showFigure('symphonyui.builtin.figures.ResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, ...
+            %         'baselineRegion', [0 obj.stimTime], ...
+            %         'measurementRegion', [0 obj.stimTime]);
+            % else
+            %     obj.showFigure('edu.washington.riekelab.figures.DualResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2));
+            %     obj.showFigure('edu.washington.riekelab.figures.DualMeanResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2), ...
+            %         'groupBy1', {'stepDuration'}, ...
+            %         'groupBy2', {'stepDuration'}); %should this be group by step duration? 
+            %     obj.showFigure('edu.washington.riekelab.figures.DualResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, obj.rig.getDevice(obj.amp2), {@mean, @var}, ...
+            %         'baselineRegion1', [0 obj.stimTime], ...
+            %         'measurementRegion1', [0 obj.stimTime], ...
+            %         'baselineRegion2', [0 obj.stimTime], ...
+            %         'measurementRegion2', [0 obj.stimTime]);
+            % end
             
             device = obj.rig.getDevice(obj.led);
             %ok to set to 0.5? 
@@ -193,8 +195,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                     target = obj.lowMean;
                 end
             end
-            disp('means')
-            disp(means)
+
 
             % 'repeated' mode: force the tracking window to endMean and record polarity.
             if strcmp(obj.mode, 'repeated')
@@ -217,6 +218,8 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                 end
 
             end
+            disp('means')
+            disp(means)
 
             
         end
@@ -264,6 +267,8 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             end
             
             idx = mod(obj.numEpochsCompleted, numel(obj.durationsPerEpoch)) + 1;
+            disp('epoch idx')
+            disp(idx)
 
             obj.stepDuration = obj.durationsPerEpoch(idx);
             obj.initMean     = obj.meansPerEpoch(idx);
@@ -298,6 +303,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         end
         
         function prepareInterval(obj, interval)
+            disp('prepare Interval')
             prepareInterval@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, interval);
             
             device = obj.rig.getDevice(obj.led);
