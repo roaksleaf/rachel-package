@@ -74,21 +74,21 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         end
         
         %when is this function called? 
-        function p = getPreview(obj, panel)
-            disp('getpreview')
-            p = symphonyui.builtin.previews.StimuliPreview(panel, @()createPreviewStimuli(obj));
-            function s = createPreviewStimuli(obj)
-                s = cell(1, obj.numberOfAverages);
-                for i = 1:numel(s)
-                    if obj.useFixedSeed
-                        seed = obj.fixedSeedValue;
-                    else
-                        seed = RandStream.shuffleSeed;
-                    end
-                    s{i} = obj.createLedStimulus(obj.contrast, obj.epochMeans, obj.epochStepDurations, seed);
-                end
-            end
-        end
+        % function p = getPreview(obj, panel)
+        %     disp('getpreview')
+        %     p = symphonyui.builtin.previews.StimuliPreview(panel, @()createPreviewStimuli(obj));
+        %     function s = createPreviewStimuli(obj)
+        %         s = cell(1, obj.numberOfAverages);
+        %         for i = 1:numel(s)
+        %             if obj.useFixedSeed
+        %                 seed = obj.fixedSeedValue;
+        %             else
+        %                 seed = RandStream.shuffleSeed;
+        %             end
+        %             s{i} = obj.createLedStimulus(obj.contrast, obj.epochMeans, obj.epochStepDurations, seed);
+        %         end
+        %     end
+        % end
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabProtocol(obj);
