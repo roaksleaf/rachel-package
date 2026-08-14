@@ -266,7 +266,8 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             obj.epochMeans     = stimMeans;
             
             stim = obj.createLedStimulus(obj.contrast, obj.epochMeans, obj.epochStepDurations, seed);
-            disp('stim created, size = ', size(stim))
+            disp('stim created, size = ')
+            disp(size(stim))
 
             disp('epoch step durations')
             disp(obj.epochStepDurations)

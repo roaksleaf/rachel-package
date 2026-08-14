@@ -113,12 +113,12 @@ classdef DynamicNoiseGenerator < symphonyui.core.StimulusGenerator
                 mean_data(idx) = obj.meanValues( ii );
             end
             mean_data = mean_data(1 : prePts + stimPts + tailPts);
-            mean_data = mean_data(:);
+            mean_data = mean_data(:)';
             disp('noiseTimeSize')
             disp(size(noiseTime))
             disp('meanDataSize')
             disp(size(mean_data))
-            stim = noiseTime * mean_data + mean_data;
+            stim = noiseTime .* mean_data + mean_data;
 
 
             % Clip signal to upper and lower limit.
