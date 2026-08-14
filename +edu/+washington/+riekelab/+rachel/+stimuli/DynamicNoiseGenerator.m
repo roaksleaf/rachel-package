@@ -114,8 +114,8 @@ classdef DynamicNoiseGenerator < symphonyui.core.StimulusGenerator
             end
             mean_data = mean_data(1 : prePts + stimPts + tailPts);
             mean_data = mean_data(:);
-            disp(size(noiseTime))
-            disp(size(mean_data))
+            disp('noiseTimeSize', size(noiseTime))
+            disp('meanDataSize', size(mean_data))
             stim = noiseTime * mean_data + mean_data;
 
 
