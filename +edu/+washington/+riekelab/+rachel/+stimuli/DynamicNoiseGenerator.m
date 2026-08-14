@@ -36,6 +36,8 @@ classdef DynamicNoiseGenerator < symphonyui.core.StimulusGenerator
             import Symphony.Core.*;
             
             timeToPts = @(t)(round(t / 1e3 * obj.sampleRate));
+            disp('sample rate')
+            disp(obj.sampleRate)
             
             prePts = timeToPts(obj.preTime);
             stimPts = timeToPts(obj.stimTime);
@@ -93,7 +95,7 @@ classdef DynamicNoiseGenerator < symphonyui.core.StimulusGenerator
                 noiseTime = -noiseTime;
             end
             
-            timeToPts = @(t)(round(t / 1e3 * obj.sampleRate));
+            % timeToPts = @(t)(round(t / 1e3 * obj.sampleRate));
             
             % prePts = timeToPts(obj.preTime);
             % stimPts = timeToPts(obj.stimTime);
@@ -119,6 +121,8 @@ classdef DynamicNoiseGenerator < symphonyui.core.StimulusGenerator
             disp('meanDataSize')
             disp(size(mean_data))
             stim = noiseTime .* mean_data + mean_data;
+            disp('stim size 1')
+            disp(size(stim))
 
 
             % Clip signal to upper and lower limit.
@@ -134,6 +138,8 @@ classdef DynamicNoiseGenerator < symphonyui.core.StimulusGenerator
             
             cobj = RenderedStimulus(class(obj), parameters, output);
             s = symphonyui.core.Stimulus(cobj);
+            disp('stim size 2')
+            disp(size(stim))
         end
         
     end
