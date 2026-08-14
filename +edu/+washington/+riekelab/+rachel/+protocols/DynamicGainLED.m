@@ -22,7 +22,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         contrast = 0.6                  % Noise contrast
         epochOrder = 'interleaved'      %interleaved or randomized
         mode = 'repeated'               
-        useFixedSeed = True             % Use a random seed for each standard deviation multiple?
+        useFixedSeed = true             % Use a random seed for each standard deviation multiple?
         fixedSeedValue = 1
         sequentialMeans = true          % go through means in sequence or randomly
         lowMean = 0.01                  % LED background mean (low) (V or norm. [0-1] depending on LED units)
