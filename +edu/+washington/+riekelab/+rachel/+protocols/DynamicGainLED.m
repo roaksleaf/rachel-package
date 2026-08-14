@@ -6,7 +6,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
     %                  repeated steps of length stepDuration; random seed each epoch.
     %     'repeated' - frozen seed every epoch; each interval length is shown under
     %                  three starting-mean conditions (low/high/end); the mean trace
-    %                  alternates low/high but the final tracking window is endmean.
+    %                  alternates low/high but the final tracking window is endMean.
     %     'oneStep'  - like 'base', but the mean holds the initial value for almost
     %                  the whole stimulus, makes a SINGLE step, then the tracking
     %                  window: [stimTime - trackDur - stepDuration, stepDuration, trackDur].
@@ -136,12 +136,12 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             if strcmp(obj.mode, 'repeated')
                 % Each interval shown under low/high/end starting means.
                 durations = repelem(base, 3);
-                means     = repmat([obj.lowmean, obj.highmean, obj.endmean], 1, numel(base));
+                means     = repmat([obj.lowMean, obj.highMean, obj.endMean], 1, numel(base));
             else
                 % One alternating low/high mean per interval.
                 durations = base;
                 n = numel(base);
-                cycle = repmat([obj.lowmean, obj.highmean], 1, ceil(n / 2));
+                cycle = repmat([obj.lowMean, obj.highMean], 1, ceil(n / 2));
                 means = cycle(1:n);
             end
         end
@@ -178,7 +178,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
         function means = assignmeans(obj, stepDurs, initMean)
             % Alternate low/high from initmean. If initmean is neither low nor high
-            % (e.g. endmean), the trace stays constant at initmean.
+            % (e.g. endMean), the trace stays constant at initmean.
             means  = zeros(1, numel(stepDurs));
             target = initMean;
             for k = 1:numel(stepDurs)
@@ -190,7 +190,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                 end
             end
 
-            % 'repeated' mode: force the tracking window to endmean and record polarity.
+            % 'repeated' mode: force the tracking window to endMean and record polarity.
             if strcmp(obj.mode, 'repeated')
                 means(end) = obj.endMean;
                 if initMean == obj.endMean
