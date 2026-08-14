@@ -104,13 +104,13 @@ classdef DynamicNoiseGenerator < symphonyui.core.StimulusGenerator
             
             % Set the gain values.
             mean_data = ones(1, prePts + stimPts + tailPts);
-            for ii = 1 : length(obj.gainValues)
+            for ii = 1 : length(obj.meanValues)
                 if ii == 1
                     idx = 1 : stepPts(1);
                 else
                     idx = sum(stepPts(1:ii-1)) + (1:stepPts(ii)); 
                 end
-                mean_data(idx) = obj.gainValues( ii );
+                mean_data(idx) = obj.meanValues( ii );
             end
             mean_data = mean_data(1 : prePts + stimPts + tailPts);
             mean_data = mean_data(:);
