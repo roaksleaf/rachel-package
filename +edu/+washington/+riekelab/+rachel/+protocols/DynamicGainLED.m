@@ -47,7 +47,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         durationsPerEpoch
         meansPerEpoch
         stepDuration
-        initmean
+        initMean
         polarityType
         epochStepDurations
         epochMeans
@@ -260,8 +260,8 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             obj.stepFrames   = round(obj.stepDuration * 1e-3 * 60.0);
             obj.polarityType = 'none';
 
-            stimSteps = obj.buildStepDurations(obj.stepDuration);
-            stimMeans = obj.assignMeans(stimSteps, obj.initMeans);
+            stimSteps = buildStepDurations(obj.stepDuration);
+            stimMeans = assignMeans(stimSteps, obj.initMean);
             obj.epochStepDurations = stimSteps;
             obj.epochMeans     = stimMeans;
             
