@@ -257,7 +257,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
             obj.stepDuration = obj.durationsPerEpoch(idx);
             obj.initMean     = obj.meansPerEpoch(idx);
-            obj.stepFrames   = round(obj.stepDuration * 1e-3 * 60.0);
+            % obj.stepFrames   = round(obj.stepDuration * 1e-3 * 60.0);
             obj.polarityType = 'none';
 
             stimSteps = buildStepDurations(obj.stepDuration);
