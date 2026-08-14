@@ -217,7 +217,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
         
         function [stim] = createLedStimulus(obj, contrast, mean_values, step_durations, seed)
-            gen = edu.washington.riekelab.stimuli.DynamicNoiseGenerator();
+            gen = edu.washington.riekelab.rachel.stimuli.DynamicNoiseGenerator();
             
             gen.preTime = 0;
             gen.stimTime = obj.stimTime;
