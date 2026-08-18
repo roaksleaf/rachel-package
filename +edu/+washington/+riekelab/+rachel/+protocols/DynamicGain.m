@@ -44,7 +44,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        modeType       = symphonyui.core.PropertyType('char', 'row', {'base', 'repeated', 'oneStep'})
+        modeType       = symphonyui.core.PropertyType('char', 'row', {'base', 'repeated', 'oneStep', 'oneStepRep'})
         epochOrderType = symphonyui.core.PropertyType('char', 'row', {'interleaved', 'randomized'})
         noiseSeed
         numChecksX
@@ -267,7 +267,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
         function [durations, gains] = buildEpochSchedule(obj)
             % Per-epoch (interval, starting-gain) lists, before ordering.
             base = obj.interleaveDurations(obj.stepDurations, obj.durRepEpochs);
-            if strcmp(obj.mode, 'repeated')
+            if strcmp(obj.mode, 'repeated') || strcmp(obj.mode, 'oneStepRep')
                 % Each interval shown under low/high/end starting gains.
                 durations = repelem(base, 3);
                 gains     = repmat([obj.lowGain, obj.highGain, obj.endGain], 1, numel(base));
@@ -282,7 +282,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
 
         function stepDurs = buildStepDurations(obj, stepDuration)
             % Step layout of the stimulus portion (before pre/tail padding).
-            if strcmp(obj.mode, 'oneStep')
+            if strcmp(obj.mode, 'oneStep') || strcmp(obj.mode, 'oneStepRep')
                 % One long hold, a single step, then the tracking window.
                 stimDur  = obj.stimTime - obj.trackDur;
                 initDur  = ceil(stimDur - stepDuration);
@@ -309,7 +309,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
             end
 
             % 'repeated' mode: force the tracking window to endGain and record polarity.
-            if strcmp(obj.mode, 'repeated')
+            if strcmp(obj.mode, 'repeated') || strcmp(obj.mode, 'oneStepRep')
                 gains(end) = obj.endGain;
                 if initGain == obj.endGain
                     gains(:) = obj.endGain;
