@@ -1,6 +1,6 @@
 function [stimulus, line_mat] = regenerateBars(b_lines_only, noiseSeeds, numChecksXs, preTime, stimTime, tailTime, ...
     backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMeans, pairedBars,...
-    numChecksYs)
+    numChecksYs, repeatSegmentDur)
     num_epochs = length(noiseSeeds);
     
     x = numChecksXs(1);
@@ -23,8 +23,24 @@ function [stimulus, line_mat] = regenerateBars(b_lines_only, noiseSeeds, numChec
         noiseMean = noiseMeans(i);
     
         numChecksY = numChecksYs(i);
-        line_mat(:,:, i) = util.getBars(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
-           noiseStdv, noiseMean, pairedBars);
+        if repeatSegmentDur > 0
+                   % Generate a short segment with no pre/tail, then tile it.
+                   seg = util.getBars(seed, numChecksX, 0, repeatSegmentDur, 0, ...
+                       backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMean, pairedBars);
+
+                   segFrames = size(seg, 2);
+                   nFull     = floor(stim_frames / segFrames);
+                   leftover  = mod(stim_frames, segFrames);
+
+                   stimPart = [repmat(seg, 1, nFull), seg(:, 1:leftover)];
+                   bg = backgroundIntensity;
+                   line_mat(:,:, i) = [bg * ones(numChecksX, pre_frames), ...
+                                       stimPart, ...
+                                       bg * ones(numChecksX, tail_frames)];
+       else
+           line_mat(:,:, i) = util.getBars(seed, numChecksX, preTime, stimTime, tailTime, ...
+               backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMean, pairedBars);
+       end
       
         if ~b_lines_only
             for ii=1:num_frames

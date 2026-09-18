@@ -39,6 +39,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
         apertureDiameter = 0            % um
         onlineAnalysis = 'none'
         amp                             % Output amplifier
+        reduceControls = false          % if oneStepRep, or repeated, cut down the number of polarity none epochs
     end
 
     properties (Hidden)
@@ -170,7 +171,7 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
             epoch.addParameter('polarityType', obj.polarityType);
 
             % Mode-specific parameters.
-            if strcmp(obj.mode, 'repeated')
+            if strcmp(obj.mode, 'repeated') || strcmp(obj.mode, 'oneStepRep')
                 
                 epoch.addParameter('allEpochConditions', obj.durationsPerEpoch);
             end
@@ -197,8 +198,8 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
         end
         
         function seed = nextSeed(obj)
-            % 'repeated' mode freezes the noise; other modes randomize each epoch.
-            if strcmp(obj.mode, 'repeated')
+            % 'repeated' / 'oneStepRep' mode freezes the noise; other modes randomize each epoch.
+            if strcmp(obj.mode, 'repeated') || strcmp(obj.mode, 'oneStepRep')
                 seed = obj.fixedSeedValue;
             else
                 seed = randi(2^32 - 1);
@@ -268,9 +269,36 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
             % Per-epoch (interval, starting-gain) lists, before ordering.
             base = obj.interleaveDurations(obj.stepDurations, obj.durRepEpochs);
             if strcmp(obj.mode, 'repeated') || strcmp(obj.mode, 'oneStepRep')
-                % Each interval shown under low/high/end starting gains.
-                durations = repelem(base, 3);
-                gains     = repmat([obj.lowGain, obj.highGain, obj.endGain], 1, numel(base));
+                if obj.reduceControls %default to 2*number step durations control epochs
+                    exp_durations = repelem(base,2);
+                    exp_gains = repmat([obj.lowGain, obj.highGain], 1, numel(base));
+                    control_durs = repelem(obj.stepDurations, 2);
+                    control_gains = repelem([obj.endGain], 1, numel(obj.stepDurations));
+                    
+                    nExp   = numel(exp_durations);
+                    nCtrl  = numel(control_durations);
+                    stride = max(1, floor(nExp / nCtrl));
+                                        
+                    durations = [];
+                    gains     = [];
+                    ci = 1;
+                    for ei = 1:nExp
+                        durations(end+1) = exp_durations(ei);
+                        gains(end+1)     = exp_gains(ei);
+                        if ci <= nCtrl && mod(ei, stride) == 0
+                            durations(end+1) = ctrl_durations(ci);
+                            gains(end+1)     = ctrl_gains(ci);
+                            ci = ci + 1;
+                        end
+                    end
+                    % Append any remaining controls
+                    durations = [durations, ctrl_durations(ci:end)];
+                    gains     = [gains,     ctrl_gains(ci:end)];
+                else
+                    % Each interval shown under low/high/end starting gains.
+                    durations = repelem(base, 3);
+                    gains     = repmat([obj.lowGain, obj.highGain, obj.endGain], 1, numel(base));
+                end
             else
                 % One alternating low/high gain per interval.
                 durations = base;
