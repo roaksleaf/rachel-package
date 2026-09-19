@@ -59,4 +59,9 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
     for frame = preFrames + stmFrames + 1:preFrames + stmFrames + tailFrames
         lineMatrix(:, frame) = backgroundIntensity;
     end
+
+    % Clip to [0,1] so that later uint8 cast doesn't wrap around
+    % This can happen with non-binary noise where randn can exceed [0, 1] range
+    lineMatrix(lineMatrix < 0) = 0;
+    lineMatrix(lineMatrix > 1) = 1;
 end
