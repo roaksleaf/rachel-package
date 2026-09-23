@@ -1,5 +1,5 @@
 function [stimulus, line_mat] = regenerateVariableMeanBars(b_lines_only, exp_name, noiseSeeds, numChecksXs, preTime, stimTime, tailTime, ...
-    backgroundIntensity, frameDwell, binaryNoise, noiseStdv, lowMeans, highMeans, backgroundFrameDwells, pairedBars, startDims, trackEnds, trackFrames,...
+    backgroundIntensity, frameDwell, binaryNoise, noiseType, noiseStdv, lowMeans, highMeans, backgroundFrameDwells, pairedBars, startDims, trackEnds, trackFrames,...
     numChecksYs)
     num_epochs = length(noiseSeeds);
     
@@ -28,7 +28,7 @@ function [stimulus, line_mat] = regenerateVariableMeanBars(b_lines_only, exp_nam
     
         numChecksY = numChecksYs(i);
         line_mat(:,:, i) = util.getVariableMeanBars(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
-           noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames);
+           noiseType, noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames);
       
         if ~b_lines_only
             for ii=1:num_frames
