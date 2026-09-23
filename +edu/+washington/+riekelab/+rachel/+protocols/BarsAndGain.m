@@ -7,8 +7,9 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
         tailTime = 0 % ms
         stixelSize = 60 % um
         binaryNoise = false 
+        noiseType = 'uniform' % 'uniform' or 'gaussian'
         pairedBars = false
-        noiseStdv = 0.6 %contrast
+        noiseStdv = 0.5 %contrast
         noiseMean = 0.5 %pixel mean of noise stimulus
         frameDwell = 3 % Frames per noise update
         stepDurations = [30000 10000 5000] % ms
@@ -294,7 +295,7 @@ classdef BarsAndGain < manookinlab.protocols.ManookinLabStageProtocol
             disp(obj.trackEnd)
             disp(obj.trackFrames)
             obj.lineMatrix = util.getVariableMeanBars(obj.noiseSeed, obj.numChecksX, obj.preTime, obj.stimTime, obj.tailTime, obj.backgroundIntensity,...
-                obj.frameDwell, obj.binaryNoise, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, obj.startDim, obj.trackEnd, obj.trackFrames); %last argument used to be a 1 pre 5/14/25
+                obj.frameDwell, obj.binaryNoise, obj.noiseType, obj.noiseStdv, obj.lowMean, obj.highMean, obj.backgroundFrameDwell, obj.pairedBars, obj.startDim, obj.trackEnd, obj.trackFrames); %last argument used to be a 1 pre 5/14/25
             disp('post line mat call')
             
             checkerboardController = stage.builtin.controllers.PropertyController(board, 'imageMatrix',...

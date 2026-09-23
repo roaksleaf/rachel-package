@@ -1,5 +1,5 @@
 function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise,...
-    noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames)
+    noiseType, noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames)
 
 
     dimBackground = startDim;
@@ -41,7 +41,12 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
             if binaryNoise == 1
                 lineMatrix(:,frame) = targetMean * (1 + noiseStdv * (2*(rand(numChecksX,1) > 0.5) - 1));
             else
-                lineMatrix(:, frame) = targetMean + (noiseStream.randn(numChecksX, 1) * targetMean * noiseStdv);
+                if strcmp(noiseType, 'gaussian')
+                    lineMatrix(:, frame) = targetMean + (noiseStream.randn(numChecksX, 1) * targetMean * noiseStdv);
+                else
+                    % Sample from uniform distribution
+                    lineMatrix(:, frame) = targetMean + (rand(numChecksX, 1) * noiseStdv);
+                end
             end
             
             % For paired bars, make every 2nd bar the opposite of the previous one.
@@ -59,4 +64,10 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
     for frame = preFrames + stmFrames + 1:preFrames + stmFrames + tailFrames
         lineMatrix(:, frame) = backgroundIntensity;
     end
+
+    % Clip to [0,1], which later uint8 casting does anyway, 
+    % but this is more explicit and useful for stim regen.
+    % This can happen with non-binary noise where randn can exceed [0, 1] range
+    lineMatrix(lineMatrix < 0) = 0;
+    lineMatrix(lineMatrix > 1) = 1;
 end
