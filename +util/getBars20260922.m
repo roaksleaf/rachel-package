@@ -1,4 +1,4 @@
-function lineMatrix = getBars(seed, numChecksX, preTime, stimTime, tailTime, ...
+function lineMatrix = getBars20260922(seed, numChecksX, preTime, stimTime, tailTime, ...
     backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMean, pairedBars)
 %GETVARIABLEMEANBARS  Frame-by-frame matrix of flickering vertical bars.
 %
@@ -38,8 +38,7 @@ function lineMatrix = getBars(seed, numChecksX, preTime, stimTime, tailTime, ...
     evenBars = (1:floor(numChecksX/2)) * 2;   % paired-bar partner indices
 
     for frame = preFrames + 1 : preFrames + stimFrames
-%         isUpdate = (mod(frame - preFrames + 1, frameDwell) == 0) || (frame == preFrames + 1);
-        isUpdate = mod(frame-preFrames -1, frameDwell) == 0; %fix on 09232026 
+        isUpdate = (mod(frame - preFrames + 1, frameDwell) == 0) || (frame == preFrames + 1);
 
         if ~isUpdate
             lineMatrix(:, frame) = lineMatrix(:, frame - 1);   % hold previous frame
@@ -59,3 +58,4 @@ function lineMatrix = getBars(seed, numChecksX, preTime, stimTime, tailTime, ...
         end
     end
 end
+

@@ -272,13 +272,17 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
                 if obj.reduceControls %default to 2*number step durations control epochs
                     exp_durations = repelem(base,2);
                     exp_gains = repmat([obj.lowGain, obj.highGain], 1, numel(base));
+                    disp(size(exp_durations))
+                    disp(size(exp_gains))
                     control_durs = repelem(obj.stepDurations, 2);
-                    control_gains = repelem([obj.endGain], 1, numel(obj.stepDurations));
+                    control_gains = repelem([obj.endGain], 1, numel(obj.stepDurations)*2);
+                    disp(size(control_durs))
+                    disp(size(control_gains))
                     
                     nExp   = numel(exp_durations);
-                    nCtrl  = numel(control_durations);
+                    nCtrl  = numel(control_durs);
                     stride = max(1, floor(nExp / nCtrl));
-                                        
+                    disp('before')                     
                     durations = [];
                     gains     = [];
                     ci = 1;
@@ -286,14 +290,15 @@ classdef DynamicGain < manookinlab.protocols.ManookinLabStageProtocol
                         durations(end+1) = exp_durations(ei);
                         gains(end+1)     = exp_gains(ei);
                         if ci <= nCtrl && mod(ei, stride) == 0
-                            durations(end+1) = ctrl_durations(ci);
-                            gains(end+1)     = ctrl_gains(ci);
+                            durations(end+1) = control_durs(ci);
+                            gains(end+1)     = control_gains(ci);
                             ci = ci + 1;
                         end
                     end
+                    disp('after')
                     % Append any remaining controls
-                    durations = [durations, ctrl_durations(ci:end)];
-                    gains     = [gains,     ctrl_gains(ci:end)];
+                    durations = [durations, control_durs(ci:end)];
+                    gains     = [gains,     control_gains(ci:end)];
                 else
                     % Each interval shown under low/high/end starting gains.
                     durations = repelem(base, 3);

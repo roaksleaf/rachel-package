@@ -25,34 +25,28 @@ function [stimulus, line_mat] = regenerateBars(exp_name, b_lines_only, noiseSeed
         numChecksY = numChecksYs(i);
         if repeatSegmentDur > 0
                    % Generate a short segment with no pre/tail, then tile it.
-                   if exp_name < 20260923
-                       seg = util.getBars20260922(seed, numChecksX, 0, repeatSegmentDur, 0, ...
+                   seg = util.getBars(seed, numChecksX, 0, repeatSegmentDur, 0, ...
                        backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMean, pairedBars);
-                   else
-                       seg = util.getBars(seed, numChecksX, 0, repeatSegmentDur, 0, ...
-                           backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMean, pairedBars);
-                   end
+
                    segFrames = size(seg, 2);
                    nFull     = floor(stim_frames / segFrames);
                    leftover  = mod(stim_frames, segFrames);
 
                    stimPart = [repmat(seg, 1, nFull), seg(:, 1:leftover)];
                    bg = backgroundIntensity;
-                   frames = [bg * ones(numChecksX, pre_frames), ...
+                   line_mat(:,:, i) = [bg * ones(numChecksX, pre_frames), ...
                                        stimPart, ...
                                        bg * ones(numChecksX, tail_frames)];
-                                   
-                   line_mat(:,:,i) = uint8(255*frames);
         else
-          if exp_name < 20260923
+          if exp_name < 20260923:
                frames = util.getBars20260922(seed, numChecksX, preTime, stimTime, tailTime, ...
                backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMean, pairedBars);
            
               
-          else
-              frames = util.getBars(seed, numChecksX, preTime, stimTime, tailTime, ...
-                   backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMean, pairedBars);
-          end
+          else:
+          frames = util.getBars(seed, numChecksX, preTime, stimTime, tailTime, ...
+               backgroundIntensity, frameDwell, binaryNoise, noiseStdv, noiseMean, pairedBars);
+           
            line_mat(:,:,i) = uint8(255*frames);
        end
       
