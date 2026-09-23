@@ -252,8 +252,13 @@ classdef GratingMeasurements < manookinlab.protocols.ManookinLabStageProtocol
                 end
                 r0 = diff(find([true, diff(g0(:)') ~= 0, true]));
                 rP = diff(find([true, diff(gP(:)') ~= 0, true]));
+                disp(r0)
+                disp(rP)
                 fprintf('w=%.2f | phase0 widths=[%s] | phasePi widths=[%s]\n', ...
                     w, num2str(unique(r0)), num2str(unique(rP)));
+                disp(unique(r0(2:end)))
+                disp(unique(rP(2:end)))
+                
                 fprintf('  counts  phase0: +%d -%d | phasePi: +%d -%d\n', ...
                     sum(g0(:)>0), sum(g0(:)<0), sum(gP(:)>0), sum(gP(:)<0));
             end
@@ -344,7 +349,7 @@ classdef GratingMeasurements < manookinlab.protocols.ManookinLabStageProtocol
         end
 
         function numberOfAverages = get.numberOfAverages(obj)
-            numberOfAverages = uint16(size(obj.allCombos, 1));
+            numberOfAverages = uint16(size(obj.contrasts,2)*size(obj.barWidths,2)*size(obj.temporalFrequencies,2)*obj.numReps);
         end
         
         function stimTime = get.stimTime(obj)
