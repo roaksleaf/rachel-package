@@ -39,13 +39,13 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
 
         if (mod(frame-preFrames+1, frameDwell) == 0)  || (frame==preFrames+1) %noise update
             if binaryNoise == 1
-                lineMatrix(:,frame) = targetMean * (1 + noiseStdv * (2*(rand(numChecksX,1) > 0.5) - 1));
+                lineMatrix(:,frame) = targetMean * (1 + noiseStdv * (2*(noiseStream.rand(numChecksX,1) > 0.5) - 1));
             else
                 if strcmp(noiseType, 'gaussian')
                     lineMatrix(:, frame) = targetMean + (noiseStream.randn(numChecksX, 1) * targetMean * noiseStdv);
                 else
                     % Sample from uniform distribution
-                    lineMatrix(:, frame) = targetMean + (rand(numChecksX, 1) * noiseStdv);
+                    lineMatrix(:, frame) = targetMean + (noiseStream.rand(numChecksX, 1) * noiseStdv);
                 end
             end
             
