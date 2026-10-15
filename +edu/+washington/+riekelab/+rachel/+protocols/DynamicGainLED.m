@@ -43,6 +43,8 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
     end
     
     properties (Hidden)
+        modeType       = symphonyui.core.PropertyType('char', 'row', {'base', 'repeated', 'oneStep', 'repOneStep'})
+        epochOrderType = symphonyui.core.PropertyType('char', 'row', {'interleaved', 'randomized'})
         ledType
         ampType
         durationsPerEpoch
@@ -96,15 +98,15 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             if numel(obj.rig.getDeviceNames('Amp')) < 2
                 obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
                 obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp), ...
-                    'groupBy', {'stepDuration'});
+                    'groupBy', {'stepDuration', 'polarityType'});
                 obj.showFigure('symphonyui.builtin.figures.ResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, ...
                     'baselineRegion', [0 obj.stimTime], ...
                     'measurementRegion', [0 obj.stimTime]);
             else
                 obj.showFigure('edu.washington.riekelab.figures.DualResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2));
                 obj.showFigure('edu.washington.riekelab.figures.DualMeanResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2), ...
-                    'groupBy1', {'stepDuration'}, ...
-                    'groupBy2', {'stepDuration'}); %should this be group by step duration? 
+                    'groupBy1', {'stepDuration', 'polarityType'}, ...
+                    'groupBy2', {'stepDuration', 'polarityType'}); %should this be group by step duration? 
                 obj.showFigure('edu.washington.riekelab.figures.DualResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, obj.rig.getDevice(obj.amp2), {@mean, @var}, ...
                     'baselineRegion1', [0 obj.stimTime], ...
                     'measurementRegion1', [0 obj.stimTime], ...
@@ -129,17 +131,14 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
             obj.durationsPerEpoch = durs;
             obj.meansPerEpoch     = means;
-            disp('durs per epoch')
-            disp(obj.durationsPerEpoch)
-            disp('means per epoch')
-            disp(obj.meansPerEpoch)
+
 
         end
 
         function [durations, means] = buildEpochSchedule(obj)
             % Per-epoch (interval, starting-mean) lists, before ordering.
             base = obj.interleaveDurations(obj.stepDurations, obj.durRepEpochs);
-            if strcmp(obj.mode, 'repeated')
+            if strcmp(obj.mode, 'repeated') || strcmp(obj.mode, 'repOneStep')
                 % Each interval shown under low/high/end starting means.
                 durations = repelem(base, 3);
                 means     = repmat([obj.lowMean, obj.highMean, obj.endMean], 1, numel(base));
@@ -170,7 +169,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
         function stepDurs = buildStepDurations(obj, stepDuration)
             % Step layout of the stimulus portion (before pre/tail padding).
-            if strcmp(obj.mode, 'oneStep')
+            if strcmp(obj.mode, 'oneStep') || strcmp(obj.mode, 'repOneStep')
                 % One long hold, a single step, then the tracking window.
                 stimDur  = obj.stimTime - obj.trackDur;
                 initDur  = ceil(stimDur - stepDuration);
@@ -198,7 +197,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
 
             % 'repeated' mode: force the tracking window to endMean and record polarity.
-            if strcmp(obj.mode, 'repeated')
+            if strcmp(obj.mode, 'repeated')|| strcmp(obj.mode, 'repOneStep')
                 means(end) = obj.endMean;
                 if initMean == obj.endMean
                     means(:) = obj.endMean;
@@ -218,9 +217,8 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                 end
 
             end
-            disp('means')
+            disp('means:')
             disp(means)
-
             
         end
 
@@ -248,13 +246,9 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             end
             
             stim = gen.generate();
-            disp('stim size 3')
-            disp(size(stim))
-            disp(stim)
         end
         
         function prepareEpoch(obj, epoch)
-            disp('prepare Epoch')
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, epoch);
             
             persistent seed;
@@ -266,7 +260,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                 seed = randi(2^32 - 1);
             end
             
-            idx = mod(obj.numEpochsCompleted, numel(obj.durationsPerEpoch)) + 1;
+            idx = mod(obj.numEpochsPrepared, numel(obj.durationsPerEpoch)) + 1;
             disp('epoch idx')
             disp(idx)
 
@@ -281,13 +275,6 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             obj.epochMeans     = stimMeans;
             
             stim = obj.createLedStimulus(obj.contrast, obj.epochMeans, obj.epochStepDurations, seed);
-            disp('stim created, size = ')
-            disp(size(stim))
-
-            disp('epoch step durations')
-            disp(obj.epochStepDurations)
-            disp('polarity type,')
-            disp(obj.polarityType)
             
             epoch.addParameter('contrast', obj.contrast);
             epoch.addParameter('epochStepDurations', obj.epochStepDurations)
@@ -304,7 +291,6 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         end
         
         function prepareInterval(obj, interval)
-            disp('prepare Interval')
             prepareInterval@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, interval);
             
             device = obj.rig.getDevice(obj.led);
