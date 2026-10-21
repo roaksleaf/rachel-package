@@ -31,6 +31,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         endMean = 0.1                   %LED Background mean (end)
         amp                             % Input amplifier
         numberOfAverages = uint16(36)    % Number of families
+	polarityFilter = 'None'            %filter to only increments or decrements
 
     end
     
@@ -43,6 +44,9 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
     end
     
     properties (Hidden)
+        modeType       = symphonyui.core.PropertyType('char', 'row', {'base', 'repeated', 'oneStep', 'repOneStep'})
+        epochOrderType = symphonyui.core.PropertyType('char', 'row', {'interleaved', 'randomized'})
+	polarityFilterType = symphonyui.core.PropertyType('char', 'row', {'None', 'increments', 'decrements'})
         ledType
         ampType
         durationsPerEpoch
@@ -96,15 +100,15 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             if numel(obj.rig.getDeviceNames('Amp')) < 2
                 obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
                 obj.showFigure('symphonyui.builtin.figures.MeanResponseFigure', obj.rig.getDevice(obj.amp), ...
-                    'groupBy', {'stepDuration'});
+                    'groupBy', {'stepDuration', 'polarityType'});
                 obj.showFigure('symphonyui.builtin.figures.ResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, ...
                     'baselineRegion', [0 obj.stimTime], ...
                     'measurementRegion', [0 obj.stimTime]);
             else
                 obj.showFigure('edu.washington.riekelab.figures.DualResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2));
                 obj.showFigure('edu.washington.riekelab.figures.DualMeanResponseFigure', obj.rig.getDevice(obj.amp), obj.rig.getDevice(obj.amp2), ...
-                    'groupBy1', {'stepDuration'}, ...
-                    'groupBy2', {'stepDuration'}); %should this be group by step duration? 
+                    'groupBy1', {'stepDuration', 'polarityType'}, ...
+                    'groupBy2', {'stepDuration', 'polarityType'}); %should this be group by step duration? 
                 obj.showFigure('edu.washington.riekelab.figures.DualResponseStatisticsFigure', obj.rig.getDevice(obj.amp), {@mean, @var}, obj.rig.getDevice(obj.amp2), {@mean, @var}, ...
                     'baselineRegion1', [0 obj.stimTime], ...
                     'measurementRegion1', [0 obj.stimTime], ...
@@ -129,27 +133,37 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
             obj.durationsPerEpoch = durs;
             obj.meansPerEpoch     = means;
-            disp('durs per epoch')
-            disp(obj.durationsPerEpoch)
-            disp('means per epoch')
-            disp(obj.meansPerEpoch)
+
 
         end
 
         function [durations, means] = buildEpochSchedule(obj)
             % Per-epoch (interval, starting-mean) lists, before ordering.
             base = obj.interleaveDurations(obj.stepDurations, obj.durRepEpochs);
-            if strcmp(obj.mode, 'repeated')
+            if strcmp(obj.mode, 'repeated') || strcmp(obj.mode, 'repOneStep')
                 % Each interval shown under low/high/end starting means.
                 durations = repelem(base, 3);
                 means     = repmat([obj.lowMean, obj.highMean, obj.endMean], 1, numel(base));
             else
                 % One alternating low/high mean per interval.
-                durations = base;
-                n = numel(base);
-                cycle = repmat([obj.lowMean, obj.highMean], 1, ceil(n / 2));
-                means = cycle(1:n);
+                durations = repelem(base, 2);
+		means = repmat([obj.lowMean,obj.highMean], 1, numel(base));
             end
+
+	    if ~strcmp(obj.polarityFilter, 'None')
+ 		switch obj.polarityFilter
+			case 'increments', wanted = 'increment';
+			case 'decrements', wanted = 'decrement';
+		end
+		polarities = cell(1, numel(durations));
+		for i = 1:numel(durations)
+			stepDurs = obj.buildStepDurations(durations(i));
+			[~, polarities{i}] = obj.assignMeans(stepDurs, means(i));
+		end
+		keep = strcmp(polarities, wanted) | strcmp(polarities, 'none');
+		durations = durations(keep);
+		means = means(keep);
+	    end
         end
 
         function durations = interleaveDurations(~, stepDurations, repCounts)
@@ -170,7 +184,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
         function stepDurs = buildStepDurations(obj, stepDuration)
             % Step layout of the stimulus portion (before pre/tail padding).
-            if strcmp(obj.mode, 'oneStep')
+            if strcmp(obj.mode, 'oneStep') || strcmp(obj.mode, 'repOneStep')
                 % One long hold, a single step, then the tracking window.
                 stimDur  = obj.stimTime - obj.trackDur;
                 initDur  = ceil(stimDur - stepDuration);
@@ -182,7 +196,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             end
         end
 
-        function means = assignMeans(obj, stepDurs, initMean)
+        function [means, polarity] = assignMeans(obj, stepDurs, initMean)
             % Alternate low/high from initmean. If initmean is neither low nor high
             % (e.g. endMean), the trace stays constant at initmean.
             means  = zeros(1, numel(stepDurs));
@@ -198,29 +212,33 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
 
 
             % 'repeated' mode: force the tracking window to endMean and record polarity.
-            if strcmp(obj.mode, 'repeated')
+            if strcmp(obj.mode, 'repeated')|| strcmp(obj.mode, 'repOneStep')
                 means(end) = obj.endMean;
                 if initMean == obj.endMean
                     means(:) = obj.endMean;
                 end
                 if means(end-1) == obj.lowMean
-                    obj.polarityType = 'increment';
+                    %obj.polarityType = 'increment';
+			polarity = 'increment';
                 elseif means(end-1) == obj.highMean
-                    obj.polarityType = 'decrement';
+                    %obj.polarityType = 'decrement';
+			polarity = 'decrement';
                 else
-                    obj.polarityType = 'none';
+                    %obj.polarityType = 'none';
+			polarity = 'none';
                 end
             else
                 if means(end) == obj.highMean
-                    obj.polarityType = 'increment';
+                   % obj.polarityType = 'increment';
+			polarity = 'increment';
                 elseif means(end) == obj.lowMean
-                    obj.polarityType = 'decrement';
+                    %obj.polarityType = 'decrement';
+			polarity = 'decrement';
                 end
 
             end
-            disp('means')
+            disp('means:')
             disp(means)
-
             
         end
 
@@ -248,13 +266,9 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             end
             
             stim = gen.generate();
-            disp('stim size 3')
-            disp(size(stim))
-            disp(stim)
         end
         
         function prepareEpoch(obj, epoch)
-            disp('prepare Epoch')
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, epoch);
             
             persistent seed;
@@ -266,7 +280,7 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
                 seed = randi(2^32 - 1);
             end
             
-            idx = mod(obj.numEpochsCompleted, numel(obj.durationsPerEpoch)) + 1;
+            idx = mod(obj.numEpochsPrepared-1, numel(obj.durationsPerEpoch)) + 1;
             disp('epoch idx')
             disp(idx)
 
@@ -276,18 +290,11 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
             obj.polarityType = 'none';
 
             stimSteps = obj.buildStepDurations(obj.stepDuration);
-            stimMeans = obj.assignMeans(stimSteps, obj.initMean);
+            [stimMeans, obj.polarityType] = obj.assignMeans(stimSteps, obj.initMean);
             obj.epochStepDurations = stimSteps;
             obj.epochMeans     = stimMeans;
             
             stim = obj.createLedStimulus(obj.contrast, obj.epochMeans, obj.epochStepDurations, seed);
-            disp('stim created, size = ')
-            disp(size(stim))
-
-            disp('epoch step durations')
-            disp(obj.epochStepDurations)
-            disp('polarity type,')
-            disp(obj.polarityType)
             
             epoch.addParameter('contrast', obj.contrast);
             epoch.addParameter('epochStepDurations', obj.epochStepDurations)
@@ -304,7 +311,6 @@ classdef DynamicGainLED < edu.washington.riekelab.protocols.RiekeLabProtocol
         end
         
         function prepareInterval(obj, interval)
-            disp('prepare Interval')
             prepareInterval@edu.washington.riekelab.protocols.RiekeLabProtocol(obj, interval);
             
             device = obj.rig.getDevice(obj.led);
