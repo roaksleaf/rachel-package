@@ -8,10 +8,14 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
     else
         targetMean = highMean;
     end
+    disp(['noise seed ', num2str(seed)]);
     noiseStream = RandStream('mt19937ar', 'Seed', seed);
     preFrames = round(60 * (preTime/1e3));
     stmFrames = round(60 * (stimTime/1e3));
     tailFrames = round(60 * (tailTime/1e3));
+    disp(['preFrames ', num2str(preFrames)]);
+    disp(['stmFrames ', num2str(stmFrames)]);
+    disp(['tailFrames ', num2str(tailFrames)]);
     
     lineMatrix = zeros(numChecksX,preFrames+stmFrames+tailFrames);
     for frame = 1:preFrames + stmFrames
