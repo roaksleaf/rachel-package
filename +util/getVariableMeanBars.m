@@ -48,7 +48,9 @@ function [lineMatrix] = getVariableMeanBars(seed, numChecksX, preTime, stimTime,
                 if strcmp(noiseType, 'gaussian')
                     lineMatrix(:, frame) = targetMean + (noiseStream.randn(numChecksX, 1) * targetMean * noiseStdv);
                 else
-                    % Sample from uniform distribution
+                    % Sample from uniform distribution. 
+                    % Rand gives [0, 1], so -0.5 * 2 puts in [-1,1]
+                    % Typical 0.5 noiseStdv gives [-0.5, 0.5], +0.5 mean gives [0, 1]
                     lineMatrix(:, frame) = targetMean + ((noiseStream.rand(numChecksX, 1) - 0.5) * 2 * noiseStdv);
                 end
             end
