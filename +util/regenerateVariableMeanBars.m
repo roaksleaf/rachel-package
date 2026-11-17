@@ -27,9 +27,18 @@ function [stimulus, line_mat] = regenerateVariableMeanBars(b_lines_only, exp_nam
         trackEnd = trackEnds(i);
     
         numChecksY = numChecksYs(i);
-        line_mat(:,:, i) = util.getVariableMeanBars(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
-           noiseType, noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames);
+        % Before 20261012 use archive regen function
+        if exp_name < 20261012
+            disp(['Using archived protocol for ', num2str(exp_name), ' as before 20261012'])
+            line_mat(:,:, i) = util.getVariableMeanBars20261012(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
+            noiseType, noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames);
       
+        else
+            disp(['Using default protocol for ', num2str(exp_name), ' for centered uniform dist'])
+            line_mat(:,:, i) = util.getVariableMeanBars(seed, numChecksX, preTime, stimTime, tailTime, backgroundIntensity, frameDwell, binaryNoise, ...
+            noiseType, noiseStdv, lowMean, highMean, backgroundFrameDwell, pairedBars, startDim, trackEnd, trackFrames);
+        end
+        
         if ~b_lines_only
             for ii=1:num_frames
                 line = line_mat(:, ii, i);
